@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: caja-chambala-backend
+  profiles:
+    active: dev
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/caja_chambala}
+    username: ${SPRING_DATASOURCE_USERNAME:app_rw}
+    password: ${SPRING_DATASOURCE_PASSWORD:dev_password_rw}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      connection-timeout: 20000
+      max-lifetime: 1800000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 25
+          order_inserts: true
+          order_updates: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    locations: classpath:db/migration
+    user: ${FLYWAY_USER:${SPRING_DATASOURCE_USERNAME:postgres}}
+    password: ${FLYWAY_PASSWORD:${SPRING_DATASOURCE_PASSWORD:postgres}}
+    url: ${FLYWAY_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/caja_chambala}}
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api/v1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+springdoc:
+  api-docs:
+    path: /docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+app:
+  caja-default-id: "a0000000-0000-0000-0000-000000000001"
+  security:
+    jwt:
+      secret: ${JWT_SECRET:dev_very_secure_secret_key_minimum_256_bits_length_1234567890}
+      access-token-expiration-minutes: 15
+      refresh-token-expiration-days: 7
+    mfa:
+      issuer: "Caja Emprende Chambala"

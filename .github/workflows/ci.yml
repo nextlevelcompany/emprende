@@ -1,0 +1,52 @@
+name: CI - Integración Continua
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  backend-test:
+    name: Backend (Java 21 / Spring Boot / Flyway)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21 LTS (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Compilar y Ejecutar Pruebas Unitarias y de Arquitectura
+        working-directory: ./backend
+        run: mvn clean test -B
+
+  frontend-build:
+    name: Frontend (Next.js 16 / TypeScript / ESLint)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar Dependencias
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Compilación Next.js
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1

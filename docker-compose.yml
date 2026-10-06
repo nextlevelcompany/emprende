@@ -1,0 +1,74 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: caja_chambala_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: caja_chambala
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d caja_chambala"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: caja_chambala_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/caja_chambala
+      SPRING_DATASOURCE_USERNAME: app_rw
+      SPRING_DATASOURCE_PASSWORD: dev_password_rw
+      FLYWAY_URL: jdbc:postgresql://db:5432/caja_chambala
+      FLYWAY_USER: postgres
+      FLYWAY_PASSWORD: postgres
+      PORT: 8080
+      JWT_SECRET: dev_very_secure_secret_key_minimum_256_bits_length_1234567890
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: caja_chambala_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+      BACKEND_INTERNAL_URL: http://backend:8080/api/v1
+    ports:
+      - "3000:3000"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: caja_chambala_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # Interfaz Web para ver correos
+      - "1025:1025" # Servidor SMTP de pruebas
+
+volumes:
+  pgdata:
