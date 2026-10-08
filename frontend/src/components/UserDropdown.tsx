@@ -1,5 +1,7 @@
 "use client"
 
+import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -8,93 +10,86 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
-  User,
-  Settings,
   LayoutDashboard,
-  Download,
-  DollarSign,
+  ShieldCheck,
   LogOut,
 } from "lucide-react"
 
 export function UserDropdown() {
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch {
+      // Ignorar error de red
+    }
+    router.push("/login")
+  }
+
   return (
     <DropdownMenu>
       {/* Trigger */}
       <DropdownMenuTrigger asChild>
-        <div className="flex items-center gap-3 cursor-pointer 
-          px-3 border-r border-l h-16 ml-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src="https://untitledui.com/images/avatars/bec-ferguson" />
-            <AvatarFallback>AM</AvatarFallback>
+        <div className="flex items-center gap-3 cursor-pointer px-3 border-r border-l h-16 ml-3 hover:bg-muted/40 transition-colors">
+          <Avatar className="h-9 w-9 border border-primary/20">
+            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+              AD
+            </AvatarFallback>
           </Avatar>
-          <div className="hidden md:flex flex-col gap-0.5">
-            <p className="text-sm font-medium">Alex Martin</p>
-            <p className="text-xs text-muted-foreground">HR Manager</p>
+          <div className="hidden md:flex flex-col gap-0.5 text-left">
+            <p className="text-xs font-semibold leading-none">Administrador</p>
+            <p className="text-[10px] text-muted-foreground leading-none">Emprende Chambala</p>
           </div>
         </div>
       </DropdownMenuTrigger>
 
       {/* Content */}
-      <DropdownMenuContent align="end" className="w-56 p-3 rounded-xl shadow-xl">
-        
+      <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl shadow-xl">
         {/* Header */}
-        <DropdownMenuLabel className="border-border rounded-xl border-1 mb-3 bg-muted/50">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src="https://untitledui.com/images/avatars/madeleine-pitts" />
-              <AvatarFallback>AM</AvatarFallback>
+        <DropdownMenuLabel className="rounded-lg p-2 bg-muted/60 mb-2">
+          <div className="flex items-center gap-2.5">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-primary/20 text-primary font-semibold text-xs">
+                AD
+              </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-sm font-medium">Alex Martin</p>
-              <p className="text-xs text-muted-foreground">Manager</p>
+              <p className="text-xs font-semibold leading-tight">Administración</p>
+              <p className="text-[10px] text-muted-foreground">admin@cajachambala.pe</p>
             </div>
           </div>
         </DropdownMenuLabel>
 
         {/* Items */}
-        <DropdownMenuItem className="gap-2 h-9">
-          <User className="!size-5" />
-          Profile
+        <DropdownMenuItem
+          onClick={() => router.push("/dashboard/analytics")}
+          className="gap-2 text-xs h-8 cursor-pointer"
+        >
+          <LayoutDashboard className="size-4 text-muted-foreground" />
+          Panel Principal
         </DropdownMenuItem>
 
-        <DropdownMenuItem className="gap-2 h-9">
-          <Settings className="!size-5" />
-          Settings
+        <DropdownMenuItem
+          onClick={() => router.push("/admin/auditoria")}
+          className="gap-2 text-xs h-8 cursor-pointer"
+        >
+          <ShieldCheck className="size-4 text-muted-foreground" />
+          Pista de Auditoría
         </DropdownMenuItem>
 
-        <DropdownMenuItem className="gap-2 h-9">
-          <LayoutDashboard className="!size-5" />
-          Dashboard
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator className="border-1 my-2"/>
-
-        <DropdownMenuItem className="gap-2 h-9">
-          <Download className="!size-5" />
-          Downloads
-        </DropdownMenuItem>
-
-        <DropdownMenuItem className="gap-2 h-9">
-          <DollarSign className="!size-5" />
-          Earnings
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator className="border-1 my-2" />
+        <DropdownMenuSeparator className="my-1.5" />
 
         {/* Logout */}
-        <div className="mt-3">
-          <Button 
-           variant={"default"}
-           className="w-full h-8 justify-center gap-2">
-            <LogOut className="size-4" />
-            Logout
-          </Button>
-        </div>
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="gap-2 text-xs h-8 text-destructive focus:text-destructive cursor-pointer font-medium"
+        >
+          <LogOut className="size-4" />
+          Cerrar Sesión
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

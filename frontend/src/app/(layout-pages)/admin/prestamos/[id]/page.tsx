@@ -18,7 +18,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatFecha } from "@/lib/utils";
 
 import {
   Card,
@@ -317,7 +317,7 @@ export default function PrestamoDetallePage() {
               S/. {Number(prestamo.montoPrincipal).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Desembolsado: {prestamo.fechaDesembolso}
+              Desembolsado: {formatFecha(prestamo.fechaDesembolso)}
             </p>
           </CardContent>
         </Card>
@@ -428,8 +428,8 @@ export default function PrestamoDetallePage() {
                       <TableCell className="text-center font-bold text-foreground">
                         #{c.nroCuota}
                       </TableCell>
-                      <TableCell className="font-medium">
-                        {c.fechaVencimiento}
+                      <TableCell className="font-medium font-mono text-xs">
+                        {formatFecha(c.fechaVencimiento)}
                       </TableCell>
                       <TableCell className="text-right">
                         S/. {Number(c.capitalProgramado).toFixed(2)}
@@ -452,8 +452,8 @@ export default function PrestamoDetallePage() {
                       <TableCell className="text-center">
                         {getBadgeEstadoCuota(c.estado)}
                       </TableCell>
-                      <TableCell className="text-center text-xs text-muted-foreground">
-                        {c.fechaPago || "-"}
+                      <TableCell className="text-center text-xs font-mono text-muted-foreground whitespace-nowrap">
+                        {formatFecha(c.fechaPago)}
                       </TableCell>
                       <TableCell className="text-right">
                         {!pagada && prestamo.estado === "VIGENTE" && (
@@ -524,7 +524,7 @@ export default function PrestamoDetallePage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Vencimiento:</span>
-                <span>{cuotaACobrar?.fechaVencimiento}</span>
+                <span className="font-mono font-medium">{formatFecha(cuotaACobrar?.fechaVencimiento)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Saldo Pendiente Cuota:</span>
@@ -545,7 +545,7 @@ export default function PrestamoDetallePage() {
                     .filter((p) => p.estado === "ABIERTO")
                     .map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.mes}/{p.anio} (Asamblea: {p.fechaReunion}) - Abierto
+                        {p.mes < 10 ? `0${p.mes}` : p.mes}/{p.anio} (Asamblea: {formatFecha(p.fechaReunion)}) - Abierto
                       </SelectItem>
                     ))}
                 </SelectContent>

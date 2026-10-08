@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -114,6 +115,42 @@ public class Operacion {
             return;
         }
         this.detalles.add(new OperacionDetalle(this.id, this.tipo, conceptoId, monto, prestamoId, cuotaId));
+    }
+
+    public void sincronizarDetalle(Short conceptoId, BigDecimal monto, UUID prestamoId, UUID cuotaId) {
+        OperacionDetalle existente = this.detalles.stream()
+                .filter(d -> Objects.equals(d.getConceptoId(), conceptoId) && Objects.equals(d.getCuotaId(), cuotaId))
+                .findFirst()
+                .orElse(null);
+
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            if (existente != null) {
+                this.detalles.remove(existente);
+                this.updatedAt = Instant.now();
+            }
+            return;
+        }
+
+        if (existente != null) {
+            existente.setMonto(monto);
+            this.updatedAt = Instant.now();
+        } else {
+            this.detalles.add(new OperacionDetalle(this.id, this.tipo, conceptoId, monto, prestamoId, cuotaId));
+            this.updatedAt = Instant.now();
+        }
+    }
+
+    public void removerDetallesDePrestamoDiferente(Short conceptoCapId, Short conceptoIntId, UUID cuotaValidaId) {
+        this.detalles.removeIf(d ->
+                (Objects.equals(d.getConceptoId(), conceptoCapId) || Objects.equals(d.getConceptoId(), conceptoIntId))
+                && !Objects.equals(d.getCuotaId(), cuotaValidaId)
+        );
+        this.updatedAt = Instant.now();
+    }
+
+    public void limpiarDetalles() {
+        this.detalles.clear();
+        this.updatedAt = Instant.now();
     }
 
     public void anular(UUID userId, String motivo) {

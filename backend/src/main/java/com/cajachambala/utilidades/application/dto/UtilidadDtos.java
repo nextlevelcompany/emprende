@@ -67,6 +67,10 @@ public class UtilidadDtos {
             Integer acciones,
             BigDecimal porcentajeParticipacion,
             BigDecimal monto,
+            BigDecimal montoCobrado,
+            BigDecimal montoReinvertido,
+            Integer accionesCompradas,
+            String modalidad,
             UUID operacionId
     ) {}
 
@@ -79,6 +83,9 @@ public class UtilidadDtos {
             Integer totalAcciones,
             BigDecimal valorPorAccion,
             DistribucionEstado estado,
+            BigDecimal totalCobrado,
+            BigDecimal totalReinvertido,
+            Integer totalAccionesCompradas,
             List<DetalleDistribucionResponse> detalles,
             Instant createdAt,
             Instant updatedAt

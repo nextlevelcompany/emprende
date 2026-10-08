@@ -1,17 +1,13 @@
 export default function Footer() {
   return (
-    <footer className="border-t">
-      <div className="container flex h-14 px-6 items-center justify-between text-sm text-muted-foreground">
-        <a href="https://codervent.com/" rel="noopener noreferrer" className="hover:underline">
-         <span>
-            © {new Date().getFullYear()}{" "}
-            <span className="font-medium text-foreground">Codervent</span>. All
-            rights reserved.
-          </span>
-        </a>
+    <footer className="border-t bg-background/50">
+      <div className="container flex h-14 px-6 items-center justify-between text-xs text-muted-foreground">
         <span>
-          Built with ❤️ by{" "}
-          <span className="font-medium text-foreground"><a href="https://codervent.com/" rel="noopener noreferrer" className="hover:underline">Codervent</a></span>
+          © {new Date().getFullYear()}{" "}
+          <span className="font-semibold text-foreground">Caja Comunal Emprende Chambala</span>. Todos los derechos reservados.
+        </span>
+        <span className="hidden sm:inline">
+          Sistema de Gestión Financiera y Contable
         </span>
       </div>
     </footer>

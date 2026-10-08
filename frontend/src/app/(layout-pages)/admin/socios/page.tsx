@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Users,
   UserPlus,
@@ -17,9 +18,10 @@ import {
   Copy,
   Edit,
   UserCheck,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatFecha } from "@/lib/utils";
 
 import {
   Card,
@@ -280,7 +282,7 @@ export default function SociosPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0 max-w-full">
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -365,16 +367,16 @@ export default function SociosPage() {
       </div>
 
       {/* Tabla con Card de la plantilla */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between border-b py-4 flex-wrap gap-3">
+      <Card className="w-full min-w-0 max-w-full overflow-hidden shadow-sm">
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between border-b p-4 sm:p-6 gap-3">
           <div>
             <CardTitle className="text-lg">Socios de la Caja</CardTitle>
             <CardDescription>
               Directorio oficial de asociados y participantes de la asamblea
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative w-64">
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+            <div className="relative w-full sm:w-60">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nombre, código..."
@@ -384,7 +386,7 @@ export default function SociosPage() {
               />
             </div>
             <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-              <SelectTrigger className="w-[140px] h-9 text-sm">
+              <SelectTrigger className="w-full sm:w-[130px] h-9 text-sm">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
@@ -396,7 +398,7 @@ export default function SociosPage() {
             </Select>
 
             <Select value={tipoFiltro} onValueChange={setTipoFiltro}>
-              <SelectTrigger className="w-[140px] h-9 text-sm">
+              <SelectTrigger className="w-full sm:w-[130px] h-9 text-sm">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -408,19 +410,19 @@ export default function SociosPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto w-full">
+          <Table className="w-full min-w-[850px]">
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">Cód</TableHead>
-                <TableHead>Socio / Cliente</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Documento</TableHead>
-                <TableHead>Contacto</TableHead>
-                <TableHead>Ingreso</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Acceso Web</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+              <TableRow className="bg-muted/30">
+                <TableHead className="w-14 text-center">Cód</TableHead>
+                <TableHead className="min-w-[170px] max-w-[220px]">Socio / Integrante</TableHead>
+                <TableHead className="w-16 text-center">Tipo</TableHead>
+                <TableHead className="whitespace-nowrap">Documento</TableHead>
+                <TableHead className="whitespace-nowrap">Contacto</TableHead>
+                <TableHead className="whitespace-nowrap text-center">Ingreso</TableHead>
+                <TableHead className="whitespace-nowrap text-center">Estado</TableHead>
+                <TableHead className="whitespace-nowrap text-center">Acceso Web</TableHead>
+                <TableHead className="whitespace-nowrap text-right pr-4">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -439,60 +441,75 @@ export default function SociosPage() {
                 </TableRow>
               ) : (
                 sociosFiltrados.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-semibold">
-                      <span className="inline-block bg-muted px-2 py-0.5 rounded text-xs font-mono">
+                  <TableRow key={s.id} className="hover:bg-muted/40 transition-colors">
+                    <TableCell className="text-center font-semibold py-3">
+                      <span className="inline-block bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
                         #{String(s.codigo).padStart(3, "0")}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-foreground">{s.nombreCompleto}</div>
-                      {s.direccion && <div className="text-xs text-muted-foreground">{s.direccion}</div>}
+                    <TableCell className="py-3 max-w-[220px]">
+                      <div className="font-medium text-foreground leading-snug">{s.nombreCompleto}</div>
+                      {s.direccion && <div className="text-[11px] text-muted-foreground truncate">{s.direccion}</div>}
+                      {s.notas && (
+                        <div className={cn(
+                          "text-[11px] mt-0.5 line-clamp-2",
+                          s.estado === "RETIRADO" ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"
+                        )} title={s.notas}>
+                          {s.notas}
+                        </div>
+                      )}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={s.tipo === "SOCIO" ? "default" : "secondary"}>
+                    <TableCell className="text-center py-3">
+                      <Badge variant={s.tipo === "SOCIO" ? "default" : "secondary"} className="text-[11px] px-2 py-0">
                         {s.tipo}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap py-3">
                       {s.documentoTipo}: {s.documentoEnmascarado}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                    <TableCell className="py-3">
+                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground whitespace-nowrap">
                         {s.telefono && (
                           <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" /> {s.telefono}
+                            <Phone className="h-3 w-3 shrink-0" /> {s.telefono}
                           </span>
                         )}
                         {s.email && (
                           <span className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" /> {s.email}
+                            <Mail className="h-3 w-3 shrink-0" /> {s.email}
                           </span>
                         )}
-                        {!s.telefono && !s.email && <span className="text-muted-foreground/60">Sin contacto</span>}
+                        {!s.telefono && !s.email && <span className="text-muted-foreground/60 text-[11px]">Sin contacto</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> {s.fechaIngreso}
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap text-center py-3">
+                      <div className="inline-flex items-center gap-1 font-mono">
+                        <Calendar className="h-3 w-3 text-muted-foreground" /> {formatFecha(s.fechaIngreso)}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap text-center py-3">
                       {s.estado === "ACTIVO" ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px]">
                           Activo
                         </Badge>
                       ) : s.estado === "INACTIVO" ? (
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[11px]">
                           Inactivo
                         </Badge>
                       ) : (
-                        <Badge variant="destructive">
-                          Retirado
-                        </Badge>
+                        <div className="inline-flex flex-col items-center gap-0.5">
+                          <Badge variant="destructive" className="text-[11px]">
+                            Retirado
+                          </Badge>
+                          {s.fechaRetiro && (
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              Baja: {formatFecha(s.fechaRetiro)}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center whitespace-nowrap py-3">
                       {s.tieneAccesoWeb ? (
                         <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                           <Shield className="h-3.5 w-3.5" /> Habilitado
@@ -514,8 +531,18 @@ export default function SociosPage() {
                         </Button>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap pr-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <Link href={`/admin/socios/detalle?id=${s.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:bg-primary/10"
+                            title="Ver Detalle y Estado de Cuenta"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
                         <Button
                           variant="ghost"
                           size="icon"

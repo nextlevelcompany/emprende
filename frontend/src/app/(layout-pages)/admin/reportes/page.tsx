@@ -20,7 +20,7 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatFecha } from "@/lib/utils";
 
 import {
   Card,
@@ -188,10 +188,11 @@ export default function ReportesPage() {
       const res = await fetch("/api/periodos");
       if (res.ok) {
         const data = await res.json();
-        setPeriodos(data);
-        if (data.length > 0 && !selectedPeriodoId) {
+        const lista: PeriodoItem[] = Array.isArray(data) ? data : data?.content || [];
+        setPeriodos(lista);
+        if (lista.length > 0 && !selectedPeriodoId) {
           // Seleccionar por defecto el periodo abierto o el primero
-          const abierto = data.find((p: PeriodoItem) => p.estado === "ABIERTO") || data[0];
+          const abierto = lista.find((p: PeriodoItem) => p.estado === "ABIERTO") || lista[0];
           setSelectedPeriodoId(abierto.id);
         }
       }
@@ -206,9 +207,10 @@ export default function ReportesPage() {
       const res = await fetch("/api/socios");
       if (res.ok) {
         const data = await res.json();
-        setSocios(data);
-        if (data.length > 0 && !selectedSocioId) {
-          setSelectedSocioId(data[0].id);
+        const lista: SocioItem[] = Array.isArray(data) ? data : data?.content || [];
+        setSocios(lista);
+        if (lista.length > 0 && !selectedSocioId) {
+          setSelectedSocioId(lista[0].id);
         }
       }
     } catch (e) {
@@ -271,12 +273,13 @@ export default function ReportesPage() {
     })}`;
   };
 
-  const sociosFiltrados = socios.filter((s) => {
+  const listaSocios = Array.isArray(socios) ? socios : [];
+  const sociosFiltrados = listaSocios.filter((s) => {
     if (!busquedaSocio) return true;
     const q = busquedaSocio.toLowerCase();
     return (
-      s.nombreCompleto.toLowerCase().includes(q) ||
-      s.codigo.toString().includes(q)
+      (s.nombreCompleto && s.nombreCompleto.toLowerCase().includes(q)) ||
+      (s.codigo !== undefined && s.codigo !== null && s.codigo.toString().includes(q))
     );
   });
 
@@ -336,7 +339,7 @@ export default function ReportesPage() {
                     <SelectContent>
                       {periodos.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.mes < 10 ? `0${p.mes}` : p.mes}/{p.anio} - Reunión {p.fechaReunion} ({p.estado})
+                          {p.mes < 10 ? `0${p.mes}` : p.mes}/{p.anio} - Reunión {formatFecha(p.fechaReunion)} ({p.estado})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -368,7 +371,7 @@ export default function ReportesPage() {
                     <strong>Periodo:</strong> {reporteAsamblea.cabecera.nombreMes}
                   </span>
                   <span>
-                    <strong>Fecha de Asamblea:</strong> {reporteAsamblea.cabecera.fechaReunion}
+                    <strong>Fecha de Asamblea:</strong> {formatFecha(reporteAsamblea.cabecera.fechaReunion)}
                   </span>
                   <span>
                     <strong>Estado:</strong>{" "}
@@ -529,7 +532,7 @@ export default function ReportesPage() {
               {/* Detalle de Movimientos Individuales */}
               <div className="space-y-2">
                 <h4 className="text-xs font-bold uppercase text-muted-foreground">
-                  Padrón de Transacciones Registradas en Asamblea ({reporteAsamblea.operaciones.length} movimientos)
+                  Padrón de Transacciones Registradas en Asamblea ({(reporteAsamblea.operaciones || []).length} movimientos)
                 </h4>
                 <div className="border rounded-md overflow-hidden">
                   <Table>
@@ -544,7 +547,7 @@ export default function ReportesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {reporteAsamblea.operaciones.map((op, idx) => {
+                      {(reporteAsamblea.operaciones || []).map((op, idx) => {
                         const isIngreso = op.tipo === "INGRESO";
                         return (
                           <TableRow key={op.id || idx} className="text-xs hover:bg-muted/40">
@@ -648,7 +651,7 @@ export default function ReportesPage() {
                   <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
                     <span><strong>Doc:</strong> {reporteSocio.socio.documentoTipo}</span>
                     <span><strong>Teléfono:</strong> {reporteSocio.socio.telefono || "-"}</span>
-                    <span><strong>Ingreso:</strong> {reporteSocio.socio.fechaIngreso}</span>
+                    <span><strong>Ingreso:</strong> {formatFecha(reporteSocio.socio.fechaIngreso)}</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -703,7 +706,7 @@ export default function ReportesPage() {
               </div>
 
               {/* Historial de Créditos del Socio */}
-              {reporteSocio.prestamos.length > 0 && (
+              {(reporteSocio.prestamos || []).length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
                     <CreditCard className="h-4 w-4" />
@@ -722,10 +725,10 @@ export default function ReportesPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {reporteSocio.prestamos.map((p) => (
+                        {(reporteSocio.prestamos || []).map((p) => (
                           <TableRow key={p.prestamoId} className="text-xs">
                             <TableCell className="font-mono font-medium">CR-{p.numero}</TableCell>
-                            <TableCell>{p.fechaDesembolso}</TableCell>
+                            <TableCell className="font-mono text-xs">{formatFecha(p.fechaDesembolso)}</TableCell>
                             <TableCell className="text-right font-mono">{formatSoles(p.montoPrincipal)}</TableCell>
                             <TableCell className="text-center font-mono">{p.nroCuotas}</TableCell>
                             <TableCell className="text-right font-mono font-bold text-rose-600">{formatSoles(p.saldoCapital)}</TableCell>
@@ -743,7 +746,7 @@ export default function ReportesPage() {
               )}
 
               {/* Historial de Utilidades del Socio */}
-              {reporteSocio.utilidades.length > 0 && (
+              {(reporteSocio.utilidades || []).length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
                     <Coins className="h-4 w-4" />
@@ -760,7 +763,7 @@ export default function ReportesPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {reporteSocio.utilidades.map((u) => (
+                        {(reporteSocio.utilidades || []).map((u) => (
                           <TableRow key={u.ejercicio} className="text-xs">
                             <TableCell className="font-semibold">Ejercicio {u.ejercicio}</TableCell>
                             <TableCell className="text-center font-mono">{u.acciones} acciones</TableCell>
@@ -782,7 +785,7 @@ export default function ReportesPage() {
               <div className="space-y-2">
                 <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
                   <FileText className="h-4 w-4" />
-                  Registro de Movimientos en Caja ({reporteSocio.movimientos.length} transacciones)
+                  Registro de Movimientos en Caja ({(reporteSocio.movimientos || []).length} transacciones)
                 </h4>
                 <div className="border rounded-md overflow-hidden">
                   <Table>
@@ -797,11 +800,11 @@ export default function ReportesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {reporteSocio.movimientos.map((m, idx) => {
+                      {(reporteSocio.movimientos || []).map((m, idx) => {
                         const isIngreso = m.tipo === "INGRESO";
                         return (
                           <TableRow key={idx} className="text-xs hover:bg-muted/40">
-                            <TableCell className="font-mono text-muted-foreground">{m.fecha}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{formatFecha(m.fecha)}</TableCell>
                             <TableCell className="font-mono font-medium">{m.nroRecibo || "-"}</TableCell>
                             <TableCell>
                               <Badge variant={isIngreso ? "default" : "destructive"} className="text-[9px] py-0">

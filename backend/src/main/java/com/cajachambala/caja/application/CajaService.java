@@ -17,6 +17,12 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import com.cajachambala.prestamos.domain.CuotaEstado;
+import com.cajachambala.prestamos.domain.CuotaPrestamo;
+import com.cajachambala.prestamos.domain.Prestamo;
+import com.cajachambala.prestamos.domain.PrestamoEstado;
+import com.cajachambala.prestamos.infrastructure.persistence.CuotaPrestamoRepository;
+import com.cajachambala.prestamos.infrastructure.persistence.PrestamoRepository;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
@@ -31,6 +37,8 @@ public class CajaService {
     private final CierrePeriodoRepository cierrePeriodoRepository;
     private final ArqueoCajaRepository arqueoCajaRepository;
     private final SocioRepository socioRepository;
+    private final PrestamoRepository prestamoRepository;
+    private final CuotaPrestamoRepository cuotaPrestamoRepository;
     private final AuditService auditService;
 
     public CajaService(
@@ -40,6 +48,8 @@ public class CajaService {
             CierrePeriodoRepository cierrePeriodoRepository,
             ArqueoCajaRepository arqueoCajaRepository,
             SocioRepository socioRepository,
+            PrestamoRepository prestamoRepository,
+            CuotaPrestamoRepository cuotaPrestamoRepository,
             AuditService auditService
     ) {
         this.periodoRepository = periodoRepository;
@@ -48,6 +58,8 @@ public class CajaService {
         this.cierrePeriodoRepository = cierrePeriodoRepository;
         this.arqueoCajaRepository = arqueoCajaRepository;
         this.socioRepository = socioRepository;
+        this.prestamoRepository = prestamoRepository;
+        this.cuotaPrestamoRepository = cuotaPrestamoRepository;
         this.auditService = auditService;
     }
 
@@ -98,7 +110,14 @@ public class CajaService {
         );
 
         BigDecimal saldoAnt = calcularSaldoAnterior(cajaId, guardado.getAnio(), guardado.getMes());
-        return toPeriodoResponse(guardado, saldoAnt, BigDecimal.ZERO, BigDecimal.ZERO, saldoAnt);
+        List<Operacion> vigentes = operacionRepository.findByCajaIdAndPeriodoIdAndEstadoOrderByFechaAscNroReciboAsc(
+                cajaId, guardado.getId(), OperacionEstado.VIGENTE);
+        BigDecimal ingresos = vigentes.stream()
+                .filter(o -> o.getTipo() == FlujoTipo.INGRESO)
+                .map(Operacion::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal saldoFin = saldoAnt.add(ingresos);
+        return toPeriodoResponse(guardado, saldoAnt, ingresos, BigDecimal.ZERO, saldoFin);
     }
 
     @Transactional(readOnly = true)
@@ -454,6 +473,35 @@ public class CajaService {
 
         BigDecimal saldoFinal = saldoAnt.add(totalIngresos).subtract(totalEgresos);
 
+        // Si existe una diferencia residual por redondeo de céntimos (menor o igual a S/. 0.50), se cuadra automáticamente
+        if (saldoFinal.compareTo(BigDecimal.ZERO) != 0 && saldoFinal.abs().compareTo(new BigDecimal("0.50")) <= 0) {
+            BigDecimal montoAjuste = saldoFinal.abs().setScale(2, java.math.RoundingMode.HALF_UP);
+            if (saldoFinal.compareTo(BigDecimal.ZERO) > 0) {
+                Concepto concEgreso = conceptoRepository.findByCodigo("OTRO_EGRESO")
+                        .orElseThrow(() -> new IllegalStateException("Concepto OTRO_EGRESO no encontrado"));
+                Operacion opAjuste = new Operacion(cajaId, periodoId, null, FlujoTipo.EGRESO, periodo.getFechaReunion(), null, "Ajuste por redondeo de caja / cuadre al cierre", userId);
+                opAjuste.agregarDetalle(concEgreso.getId(), montoAjuste, null, null);
+                operacionRepository.save(opAjuste);
+                totalEgresos = totalEgresos.add(montoAjuste);
+                totalesConcepto.merge("OTRO_EGRESO", montoAjuste, BigDecimal::add);
+            } else {
+                Concepto concIngreso = conceptoRepository.findByCodigo("OTRO_INGRESO")
+                        .orElseThrow(() -> new IllegalStateException("Concepto OTRO_INGRESO no encontrado"));
+                Operacion opAjuste = new Operacion(cajaId, periodoId, null, FlujoTipo.INGRESO, periodo.getFechaReunion(), null, "Ajuste por redondeo de caja / cuadre al cierre", userId);
+                opAjuste.agregarDetalle(concIngreso.getId(), montoAjuste, null, null);
+                operacionRepository.save(opAjuste);
+                totalIngresos = totalIngresos.add(montoAjuste);
+                totalesConcepto.merge("OTRO_INGRESO", montoAjuste, BigDecimal::add);
+            }
+            saldoFinal = saldoAnt.add(totalIngresos).subtract(totalEgresos);
+        }
+
+        if (saldoFinal.compareTo(BigDecimal.ZERO) != 0) {
+            throw new IllegalStateException("No se puede cerrar la caja. Existe un saldo disponible de S/. " +
+                    saldoFinal.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() +
+                    ". En la metodología de Caja Comunal, todos los fondos recaudados deben colocarse en préstamos (u otros egresos) hasta que el saldo llegue a cero (S/. 0.00).");
+        }
+
         Map<String, Object> detalleMap = new HashMap<>();
         totalesConcepto.forEach((k, v) -> detalleMap.put(k, v.toPlainString()));
 
@@ -535,10 +583,111 @@ public class CajaService {
     }
 
     // ==========================================
-    // 5. Planilla Mensual (Réplica exacta Excel)
+    // 5. Planilla Mensual (Réplica exacta Excel e interactiva)
     // ==========================================
 
-    @Transactional(readOnly = true)
+    @Transactional
+    public void precargarPlanillaPorDefecto(Periodo periodo, UUID userId) {
+        UUID cajaId = periodo.getCajaId();
+        List<Socio> sociosActivos = socioRepository.findByCajaIdAndDeletedAtIsNullOrderByCodigoAsc(cajaId).stream()
+                .filter(s -> s.getEstado() == SocioEstado.ACTIVO)
+                .toList();
+
+        if (sociosActivos.isEmpty()) {
+            return;
+        }
+
+        Concepto concAccion = conceptoRepository.findByCodigo("ACCION")
+                .orElseThrow(() -> new IllegalStateException("Concepto ACCION no encontrado"));
+        Concepto concCapCobrado = conceptoRepository.findByCodigo("PAGO_CAPITAL")
+                .orElseThrow(() -> new IllegalStateException("Concepto PAGO_CAPITAL no encontrado"));
+        Concepto concIntRecibido = conceptoRepository.findByCodigo("INTERES_RECIBIDO")
+                .orElseThrow(() -> new IllegalStateException("Concepto INTERES_RECIBIDO no encontrado"));
+
+        List<CuotaPrestamo> todasCuotasPendientes = cuotaPrestamoRepository.findPendientesVigentesPorCaja(cajaId);
+        Map<UUID, List<CuotaPrestamo>> cuotasPorSocio = todasCuotasPendientes.stream()
+                .collect(Collectors.groupingBy(c -> c.getPrestamo().getSocioId()));
+
+        Integer ultimoRecibo = operacionRepository.findMaxNroReciboByCajaId(cajaId);
+        int nroRecibo = ultimoRecibo != null ? ultimoRecibo : 0;
+        LocalDate fecha = periodo.getFechaReunion();
+
+        for (Socio socio : sociosActivos) {
+            nroRecibo++;
+            String desc = "Aportes y cobranzas " + periodo.getMes() + "/" + periodo.getAnio() + " - " + socio.getNombreCompleto();
+            Operacion op = new Operacion(cajaId, periodo.getId(), socio.getId(), FlujoTipo.INGRESO, fecha, nroRecibo, desc, userId);
+
+            // 1. Al menos 1 acción por defecto (S/ 30.00)
+            BigDecimal montoAccion = new BigDecimal("30.00");
+            op.agregarDetalle(concAccion.getId(), montoAccion, null, null);
+
+            // 2. Cuotas de deudas e intereses vigentes correspondientes a este periodo
+            List<CuotaPrestamo> cuotasSocio = cuotasPorSocio.getOrDefault(socio.getId(), Collections.emptyList());
+            Map<UUID, Optional<CuotaPrestamo>> cuotaPorPrestamo = cuotasSocio.stream()
+                    .filter(c -> !c.getFechaVencimiento().isAfter(fecha) ||
+                            (c.getFechaVencimiento().getYear() == periodo.getAnio() && c.getFechaVencimiento().getMonthValue() == periodo.getMes()))
+                    .collect(Collectors.groupingBy(c -> c.getPrestamo().getId(),
+                            Collectors.minBy(Comparator.comparing(CuotaPrestamo::getNroCuota))));
+
+            for (Optional<CuotaPrestamo> optCuota : cuotaPorPrestamo.values()) {
+                if (optCuota.isPresent()) {
+                    CuotaPrestamo cuota = optCuota.get();
+                    Prestamo prestamo = cuota.getPrestamo();
+                    BigDecimal capProg = cuota.getSaldoCapitalPendiente();
+                    BigDecimal intProg = cuota.getSaldoInteresPendiente();
+
+                    if (capProg.compareTo(BigDecimal.ZERO) > 0) {
+                        op.agregarDetalle(concCapCobrado.getId(), capProg, prestamo.getId(), cuota.getId());
+                    }
+                    if (intProg.compareTo(BigDecimal.ZERO) > 0) {
+                        op.agregarDetalle(concIntRecibido.getId(), intProg, prestamo.getId(), cuota.getId());
+                    }
+
+                    cuota.fijarPago(cuota.getCapitalProgramado(), cuota.getInteresProgramado(), BigDecimal.ZERO, fecha);
+                    cuotaPrestamoRepository.save(cuota);
+                    prestamo.verificarEstadoCancelacion();
+                    prestamoRepository.save(prestamo);
+                }
+            }
+
+            operacionRepository.save(op);
+        }
+    }
+
+    @Transactional
+    public PlanillaMensualResponse precargarPlanilla(UUID periodoId) {
+        UUID cajaId = getCajaIdActual();
+        UUID userId = getUserIdActual();
+        Periodo periodo = periodoRepository.findByIdAndCajaId(periodoId, cajaId)
+                .orElseThrow(() -> new IllegalArgumentException("Periodo no encontrado"));
+
+        if (periodo.getEstado() == PeriodoEstado.CERRADO) {
+            throw new IllegalStateException("No se puede pre-cargar un periodo cerrado");
+        }
+
+        List<Operacion> opsExistentes = operacionRepository.findByCajaIdAndPeriodoIdAndEstadoOrderByFechaAscNroReciboAsc(
+                cajaId, periodoId, OperacionEstado.VIGENTE);
+        for (Operacion op : opsExistentes) {
+            if (op.getSocioId() != null && op.getTipo() == FlujoTipo.INGRESO) {
+                for (OperacionDetalle d : op.getDetalles()) {
+                    if (d.getCuotaId() != null) {
+                        cuotaPrestamoRepository.findById(d.getCuotaId()).ifPresent(c -> {
+                            c.revertirPago();
+                            cuotaPrestamoRepository.save(c);
+                            c.getPrestamo().verificarEstadoCancelacion();
+                            prestamoRepository.save(c.getPrestamo());
+                        });
+                    }
+                }
+                op.anular(userId, "Restablecimiento de pre-carga de planilla");
+                operacionRepository.save(op);
+            }
+        }
+
+        return obtenerPlanillaMensual(periodoId);
+    }
+
+    @Transactional
     public PlanillaMensualResponse obtenerPlanillaMensual(UUID periodoId) {
         UUID cajaId = getCajaIdActual();
         Periodo periodo = periodoRepository.findByIdAndCajaId(periodoId, cajaId)
@@ -551,7 +700,6 @@ public class CajaService {
 
         List<Socio> sociosActivos = socioRepository.findByCajaIdAndDeletedAtIsNullOrderByCodigoAsc(cajaId);
 
-        // Agrupar operaciones por socioId
         Map<UUID, List<Operacion>> opsPorSocio = operacionesVigentes.stream()
                 .filter(o -> o.getSocioId() != null)
                 .collect(Collectors.groupingBy(Operacion::getSocioId));
@@ -560,13 +708,15 @@ public class CajaService {
                 .filter(c -> c.getId() != null)
                 .collect(Collectors.toMap(Concepto::getId, c -> c, (a, b) -> a));
 
+        List<CuotaPrestamo> todasCuotasPendientes = cuotaPrestamoRepository.findPendientesVigentesPorCaja(cajaId);
+        Map<UUID, List<CuotaPrestamo>> cuotasPorSocio = todasCuotasPendientes.stream()
+                .collect(Collectors.groupingBy(c -> c.getPrestamo().getSocioId()));
+
         List<FilaPlanillaMensual> filas = new ArrayList<>();
 
-        // Totales por concepto
         Map<String, BigDecimal> totIng = new HashMap<>();
         Map<String, BigDecimal> totEg = new HashMap<>();
 
-        // Inicializar mapas
         for (String c : List.of("DEPOSITO_AHORRO", "PAGO_CAPITAL", "INTERES_RECIBIDO", "ACCION", "MULTA_TARDANZA", "RESERVA", "OTRO_INGRESO")) {
             totIng.put(c, BigDecimal.ZERO);
         }
@@ -574,7 +724,6 @@ public class CajaService {
             totEg.put(c, BigDecimal.ZERO);
         }
 
-        // Set de todos los socios a mostrar: socios activos o socios con operaciones en este mes
         Set<UUID> todosSocioIds = new TreeSet<>();
         sociosActivos.stream().filter(s -> s.getEstado() == SocioEstado.ACTIVO).forEach(s -> todosSocioIds.add(s.getId()));
         todosSocioIds.addAll(opsPorSocio.keySet());
@@ -593,6 +742,7 @@ public class CajaService {
             Integer recibo = null;
             UUID opIngresoId = null;
             UUID opEgresoId = null;
+            UUID prestamoId = null;
 
             BigDecimal ahorro = BigDecimal.ZERO;
             BigDecimal pagoCapital = BigDecimal.ZERO;
@@ -611,6 +761,9 @@ public class CajaService {
             BigDecimal otroEgreso = BigDecimal.ZERO;
             BigDecimal totalEgreso = BigDecimal.ZERO;
 
+            UUID cuotaId = null;
+
+            List<UUID> cuotasIdsEnOps = new ArrayList<>();
             for (Operacion op : socioOps) {
                 if (op.getTipo() == FlujoTipo.INGRESO) {
                     if (recibo == null && op.getNroRecibo() != null) recibo = op.getNroRecibo();
@@ -620,6 +773,9 @@ public class CajaService {
                 }
 
                 for (OperacionDetalle d : op.getDetalles()) {
+                    if (d.getCuotaId() != null && !cuotasIdsEnOps.contains(d.getCuotaId())) {
+                        cuotasIdsEnOps.add(d.getCuotaId());
+                    }
                     Concepto conc = conceptosMap.get(d.getConceptoId());
                     if (conc == null) continue;
                     String codigo = conc.getCodigo();
@@ -653,6 +809,172 @@ public class CajaService {
                 }
             }
 
+            List<CuotaPrestamo> cuotasDelSocio = cuotasPorSocio.getOrDefault(sId, Collections.emptyList());
+            List<DetalleCuotaPlanilla> detallesPrestamos = new ArrayList<>();
+            List<DetalleCuotaPlanilla> cuotasDisponiblesAdelanto = new ArrayList<>();
+
+            boolean tieneOperacionIngreso = (opIngresoId != null);
+            boolean accionesPagado = tieneOperacionIngreso && (acciones.compareTo(BigDecimal.ZERO) > 0);
+            boolean cuotaPagada = tieneOperacionIngreso && (pagoCapital.compareTo(BigDecimal.ZERO) > 0 || interesRecibido.compareTo(BigDecimal.ZERO) > 0);
+
+            if (!cuotasIdsEnOps.isEmpty()) {
+                // Hay cuotas asociadas en operaciones de este periodo
+                for (UUID cId : cuotasIdsEnOps) {
+                    CuotaPrestamo cp = cuotaPrestamoRepository.findById(cId).orElse(null);
+                    if (cp != null) {
+                        BigDecimal capPagadoCuota = BigDecimal.ZERO;
+                        BigDecimal intPagadoCuota = BigDecimal.ZERO;
+                        for (Operacion op : socioOps) {
+                            for (OperacionDetalle d : op.getDetalles()) {
+                                if (Objects.equals(d.getCuotaId(), cId)) {
+                                    Concepto conc = conceptosMap.get(d.getConceptoId());
+                                    if (conc != null) {
+                                        if ("PAGO_CAPITAL".equals(conc.getCodigo())) {
+                                            capPagadoCuota = capPagadoCuota.add(d.getMonto());
+                                        } else if ("INTERES_RECIBIDO".equals(conc.getCodigo())) {
+                                            intPagadoCuota = intPagadoCuota.add(d.getMonto());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        boolean esAdelanto = esCuotaAdelanto(cp, periodo);
+                        detallesPrestamos.add(new DetalleCuotaPlanilla(
+                                cp.getPrestamo().getId(),
+                                cp.getPrestamo().getNumero(),
+                                cp.getId(),
+                                cp.getNroCuota().intValue(),
+                                cp.getPrestamo().getNroCuotas().intValue(),
+                                cp.getFechaVencimiento(),
+                                cp.getCapitalProgramado(),
+                                cp.getInteresProgramado(),
+                                capPagadoCuota,
+                                intPagadoCuota,
+                                esAdelanto,
+                                cp.getEstado().name()
+                        ));
+                    }
+                }
+
+                // Cuotas regulares del socio que no estuvieron en las operaciones (no pagadas)
+                for (CuotaPrestamo cp : cuotasDelSocio) {
+                    if (!cuotasIdsEnOps.contains(cp.getId())) {
+                        if (!esCuotaAdelanto(cp, periodo)) {
+                            detallesPrestamos.add(new DetalleCuotaPlanilla(
+                                    cp.getPrestamo().getId(),
+                                    cp.getPrestamo().getNumero(),
+                                    cp.getId(),
+                                    cp.getNroCuota().intValue(),
+                                    cp.getPrestamo().getNroCuotas().intValue(),
+                                    cp.getFechaVencimiento(),
+                                    cp.getCapitalProgramado(),
+                                    cp.getInteresProgramado(),
+                                    BigDecimal.ZERO,
+                                    BigDecimal.ZERO,
+                                    false,
+                                    cp.getEstado().name()
+                            ));
+                        } else {
+                            cuotasDisponiblesAdelanto.add(new DetalleCuotaPlanilla(
+                                    cp.getPrestamo().getId(),
+                                    cp.getPrestamo().getNumero(),
+                                    cp.getId(),
+                                    cp.getNroCuota().intValue(),
+                                    cp.getPrestamo().getNroCuotas().intValue(),
+                                    cp.getFechaVencimiento(),
+                                    cp.getCapitalProgramado(),
+                                    cp.getInteresProgramado(),
+                                    BigDecimal.ZERO,
+                                    BigDecimal.ZERO,
+                                    true,
+                                    cp.getEstado().name()
+                            ));
+                        }
+                    }
+                }
+            } else {
+                // No hay operaciones registradas aún con cuotas
+                for (CuotaPrestamo cp : cuotasDelSocio) {
+                    if (!esCuotaAdelanto(cp, periodo)) {
+                        detallesPrestamos.add(new DetalleCuotaPlanilla(
+                                cp.getPrestamo().getId(),
+                                cp.getPrestamo().getNumero(),
+                                cp.getId(),
+                                cp.getNroCuota().intValue(),
+                                cp.getPrestamo().getNroCuotas().intValue(),
+                                cp.getFechaVencimiento(),
+                                cp.getCapitalProgramado(),
+                                cp.getInteresProgramado(),
+                                cuotaPagada ? cp.getCapitalProgramado() : BigDecimal.ZERO,
+                                cuotaPagada ? cp.getInteresProgramado() : BigDecimal.ZERO,
+                                false,
+                                cp.getEstado().name()
+                        ));
+                    } else {
+                        cuotasDisponiblesAdelanto.add(new DetalleCuotaPlanilla(
+                                cp.getPrestamo().getId(),
+                                cp.getPrestamo().getNumero(),
+                                cp.getId(),
+                                cp.getNroCuota().intValue(),
+                                cp.getPrestamo().getNroCuotas().intValue(),
+                                cp.getFechaVencimiento(),
+                                cp.getCapitalProgramado(),
+                                cp.getInteresProgramado(),
+                                BigDecimal.ZERO,
+                                BigDecimal.ZERO,
+                                true,
+                                cp.getEstado().name()
+                        ));
+                    }
+                }
+            }
+
+            detallesPrestamos.sort(Comparator.comparing(DetalleCuotaPlanilla::fechaVencimiento)
+                    .thenComparing(DetalleCuotaPlanilla::prestamoNumero)
+                    .thenComparing(DetalleCuotaPlanilla::cuotaNro));
+
+            cuotasDisponiblesAdelanto.sort(Comparator.comparing(DetalleCuotaPlanilla::fechaVencimiento)
+                    .thenComparing(DetalleCuotaPlanilla::prestamoNumero)
+                    .thenComparing(DetalleCuotaPlanilla::cuotaNro));
+
+            BigDecimal cuotaCapProg = BigDecimal.ZERO;
+            BigDecimal cuotaIntProg = BigDecimal.ZERO;
+            Integer cuotaNro = null;
+            Integer cuotasTotal = null;
+            Integer prestamoNumero = null;
+
+            if (!detallesPrestamos.isEmpty()) {
+                DetalleCuotaPlanilla primera = detallesPrestamos.get(0);
+                cuotaId = primera.cuotaId();
+                prestamoId = primera.prestamoId();
+                prestamoNumero = primera.prestamoNumero();
+                cuotaNro = primera.cuotaNro();
+                cuotasTotal = primera.cuotasTotal();
+
+                cuotaCapProg = detallesPrestamos.stream()
+                        .map(DetalleCuotaPlanilla::capitalProgramado)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                cuotaIntProg = detallesPrestamos.stream()
+                        .map(DetalleCuotaPlanilla::interesProgramado)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
+
+            // Si el periodo está abierto y el socio no tiene operación de ingreso registrada:
+            // Por defecto los montos salen NO COBRADOS (accionesPagado = false, cuotaPagada = false, totalIngreso = 0),
+            // PERO sí figura el estimado a cobrar en las columnas correspondientes:
+            if (periodo.getEstado() == PeriodoEstado.ABIERTO && !tieneOperacionIngreso) {
+                accionesPagado = false;
+                cuotaPagada = false;
+                totalIngreso = BigDecimal.ZERO;
+                if (s.getEstado() == SocioEstado.ACTIVO) {
+                    acciones = new BigDecimal("30.00");
+                }
+                if (cuotaId != null) {
+                    pagoCapital = cuotaCapProg;
+                    interesRecibido = cuotaIntProg;
+                }
+            }
+
             filas.add(new FilaPlanillaMensual(
                     recibo,
                     s.getId(),
@@ -674,7 +996,18 @@ public class CajaService {
                     otroEgreso,
                     totalEgreso,
                     opIngresoId,
-                    opEgresoId
+                    opEgresoId,
+                    prestamoId,
+                    accionesPagado,
+                    cuotaPagada,
+                    cuotaCapProg,
+                    cuotaIntProg,
+                    cuotaId,
+                    cuotaNro,
+                    cuotasTotal,
+                    prestamoNumero,
+                    detallesPrestamos,
+                    cuotasDisponiblesAdelanto
             ));
         }
 
@@ -685,6 +1018,7 @@ public class CajaService {
 
         if (!opsSinSocio.isEmpty()) {
             BigDecimal gastoAdmin = BigDecimal.ZERO;
+            BigDecimal utilidad = BigDecimal.ZERO;
             BigDecimal red = BigDecimal.ZERO;
             BigDecimal reservas = BigDecimal.ZERO;
             BigDecimal otroEgreso = BigDecimal.ZERO;
@@ -700,6 +1034,10 @@ public class CajaService {
                         gastoAdmin = gastoAdmin.add(m);
                         totalEgreso = totalEgreso.add(m);
                         totEg.merge("GASTO_ADMIN", m, BigDecimal::add);
+                    } else if ("UTILIDAD_DISTRIBUIDA".equals(conc.getCodigo())) {
+                        utilidad = utilidad.add(m);
+                        totalEgreso = totalEgreso.add(m);
+                        totEg.merge("UTILIDAD_DISTRIBUIDA", m, BigDecimal::add);
                     } else if ("RED".equals(conc.getCodigo())) {
                         red = red.add(m);
                         totalEgreso = totalEgreso.add(m);
@@ -737,10 +1075,19 @@ public class CajaService {
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
                     gastoAdmin,
-                    BigDecimal.ZERO,
+                    utilidad,
                     red,
                     otroEgreso,
                     totalEgreso,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    null,
+                    null,
                     null,
                     null
             ));
@@ -765,6 +1112,223 @@ public class CajaService {
                 saldoAnt,
                 saldoFinal
         );
+    }
+
+    @Transactional
+    public PlanillaMensualResponse guardarPlanilla(UUID periodoId, GuardarPlanillaRequest req) {
+        UUID cajaId = getCajaIdActual();
+        UUID userId = getUserIdActual();
+
+        Periodo periodo = periodoRepository.findByIdAndCajaId(periodoId, cajaId)
+                .orElseThrow(() -> new IllegalArgumentException("Periodo no encontrado"));
+
+        if (periodo.getEstado() == PeriodoEstado.CERRADO) {
+            throw new IllegalStateException("No se puede editar la planilla de un periodo cerrado");
+        }
+
+        Concepto concAccion = conceptoRepository.findByCodigo("ACCION")
+                .orElseThrow(() -> new IllegalStateException("Concepto ACCION no encontrado"));
+        Concepto concCapCobrado = conceptoRepository.findByCodigo("PAGO_CAPITAL")
+                .orElseThrow(() -> new IllegalStateException("Concepto PAGO_CAPITAL no encontrado"));
+        Concepto concIntRecibido = conceptoRepository.findByCodigo("INTERES_RECIBIDO")
+                .orElseThrow(() -> new IllegalStateException("Concepto INTERES_RECIBIDO no encontrado"));
+        Concepto concAhorro = conceptoRepository.findByCodigo("DEPOSITO_AHORRO")
+                .orElseThrow(() -> new IllegalStateException("Concepto DEPOSITO_AHORRO no encontrado"));
+        Concepto concTardanza = conceptoRepository.findByCodigo("MULTA_TARDANZA")
+                .orElseThrow(() -> new IllegalStateException("Concepto MULTA_TARDANZA no encontrado"));
+        Concepto concReserva = conceptoRepository.findByCodigo("RESERVA")
+                .orElseThrow(() -> new IllegalStateException("Concepto RESERVA no encontrado"));
+
+        List<Operacion> operacionesVigentes = operacionRepository.findByCajaIdAndPeriodoIdAndEstadoOrderByFechaAscNroReciboAsc(
+                cajaId, periodoId, OperacionEstado.VIGENTE);
+
+        Map<UUID, Operacion> opIngresoPorSocio = operacionesVigentes.stream()
+                .filter(o -> o.getSocioId() != null && o.getTipo() == FlujoTipo.INGRESO)
+                .collect(Collectors.toMap(Operacion::getSocioId, o -> o, (a, b) -> a));
+
+        Integer maxRecibo = operacionRepository.findMaxNroReciboByCajaId(cajaId);
+        int nextRecibo = maxRecibo != null ? maxRecibo : 0;
+
+        for (GuardarFilaPlanillaRequest filaReq : req.filas()) {
+            if (filaReq.socioId() == null) continue;
+
+            Socio socio = socioRepository.findByIdAndCajaId(filaReq.socioId(), cajaId).orElse(null);
+            if (socio == null) continue;
+
+            boolean accionesPagado = Boolean.TRUE.equals(filaReq.accionesPagado());
+            boolean cuotaPagada = Boolean.TRUE.equals(filaReq.cuotaPagada());
+
+            BigDecimal acciones = (accionesPagado && filaReq.acciones() != null) ? filaReq.acciones() : BigDecimal.ZERO;
+            BigDecimal pagoCapital = (cuotaPagada && filaReq.pagoCapital() != null) ? filaReq.pagoCapital() : BigDecimal.ZERO;
+            BigDecimal interesRecibido = (cuotaPagada && filaReq.interesRecibido() != null) ? filaReq.interesRecibido() : BigDecimal.ZERO;
+            BigDecimal ahorro = filaReq.ahorro() != null ? filaReq.ahorro() : BigDecimal.ZERO;
+            BigDecimal tardanza = filaReq.tardanzaMulta() != null ? filaReq.tardanzaMulta() : BigDecimal.ZERO;
+            BigDecimal reservas = filaReq.reservas() != null ? filaReq.reservas() : BigDecimal.ZERO;
+
+            BigDecimal totalIngreso = acciones.add(pagoCapital).add(interesRecibido).add(ahorro).add(tardanza).add(reservas);
+
+            // Manejo de la cuota del préstamo
+            Map<UUID, CuotaPrestamo> cuotasMap = new LinkedHashMap<>();
+
+            Operacion opIngreso = opIngresoPorSocio.get(socio.getId());
+            if (opIngreso != null) {
+                for (OperacionDetalle d : opIngreso.getDetalles()) {
+                    if (d.getCuotaId() != null) {
+                        cuotaPrestamoRepository.findById(d.getCuotaId()).ifPresent(c -> cuotasMap.put(c.getId(), c));
+                    }
+                }
+            }
+
+            if (filaReq.cuotaId() != null && !cuotasMap.containsKey(filaReq.cuotaId())) {
+                cuotaPrestamoRepository.findById(filaReq.cuotaId()).ifPresent(c -> cuotasMap.put(c.getId(), c));
+            }
+
+            List<CuotaPrestamo> cuotasPendientesSocio = cuotaPrestamoRepository.findPendientesVigentesPorSocio(cajaId, socio.getId()).stream()
+                    .filter(c -> !c.getFechaVencimiento().isAfter(periodo.getFechaReunion()) ||
+                            (c.getFechaVencimiento().getYear() == periodo.getAnio() && c.getFechaVencimiento().getMonthValue() == periodo.getMes()))
+                    .toList();
+            for (CuotaPrestamo c : cuotasPendientesSocio) {
+                cuotasMap.putIfAbsent(c.getId(), c);
+            }
+
+            List<CuotaPrestamo> cuotasAProcesar = new ArrayList<>(cuotasMap.values());
+            cuotasAProcesar.sort(Comparator.comparing(CuotaPrestamo::getFechaVencimiento)
+                    .thenComparing(c -> c.getPrestamo().getNumero())
+                    .thenComparing(CuotaPrestamo::getNroCuota));
+
+            Map<UUID, BigDecimal> capPorCuota = new HashMap<>();
+            Map<UUID, BigDecimal> intPorCuota = new HashMap<>();
+            Set<Prestamo> prestamosAfectados = new HashSet<>();
+
+            if (!cuotaPagada || (pagoCapital.compareTo(BigDecimal.ZERO) <= 0 && interesRecibido.compareTo(BigDecimal.ZERO) <= 0)) {
+                for (CuotaPrestamo cuota : cuotasAProcesar) {
+                    cuota.revertirPago();
+                    cuotaPrestamoRepository.save(cuota);
+                    prestamosAfectados.add(cuota.getPrestamo());
+                }
+            } else {
+                for (CuotaPrestamo cuota : cuotasAProcesar) {
+                    cuota.revertirPago();
+                }
+
+                BigDecimal remCap = pagoCapital;
+                BigDecimal remInt = interesRecibido;
+
+                for (CuotaPrestamo cuota : cuotasAProcesar) {
+                    BigDecimal capProg = cuota.getCapitalProgramado();
+                    BigDecimal intProg = cuota.getInteresProgramado();
+
+                    BigDecimal capAbonar = remCap.min(capProg);
+                    BigDecimal intAbonar = remInt.min(intProg);
+
+                    capPorCuota.put(cuota.getId(), capAbonar);
+                    intPorCuota.put(cuota.getId(), intAbonar);
+
+                    remCap = remCap.subtract(capAbonar);
+                    remInt = remInt.subtract(intAbonar);
+                }
+
+                if (remCap.compareTo(BigDecimal.ZERO) > 0 || remInt.compareTo(BigDecimal.ZERO) > 0) {
+                    List<CuotaPrestamo> cuotasFuturas = cuotaPrestamoRepository.findPendientesVigentesPorSocio(cajaId, socio.getId()).stream()
+                            .filter(c -> !cuotasMap.containsKey(c.getId()))
+                            .sorted(Comparator.comparing(CuotaPrestamo::getFechaVencimiento)
+                                    .thenComparing(c -> c.getPrestamo().getNumero())
+                                    .thenComparing(CuotaPrestamo::getNroCuota))
+                            .toList();
+
+                    for (CuotaPrestamo cuota : cuotasFuturas) {
+                        if (remCap.compareTo(BigDecimal.ZERO) <= 0 && remInt.compareTo(BigDecimal.ZERO) <= 0) break;
+                        BigDecimal capProg = cuota.getCapitalProgramado();
+                        BigDecimal intProg = cuota.getInteresProgramado();
+
+                        BigDecimal capAbonar = remCap.min(capProg);
+                        BigDecimal intAbonar = remInt.min(intProg);
+
+                        cuotasAProcesar.add(cuota);
+                        capPorCuota.put(cuota.getId(), capAbonar);
+                        intPorCuota.put(cuota.getId(), intAbonar);
+
+                        remCap = remCap.subtract(capAbonar);
+                        remInt = remInt.subtract(intAbonar);
+                    }
+                }
+
+                if (remCap.compareTo(BigDecimal.ZERO) > 0) {
+                    throw new IllegalArgumentException("El pago de capital (S/ " + pagoCapital + ") excede la deuda exigible programada de " + socio.getNombreCompleto());
+                }
+                if (remInt.compareTo(BigDecimal.ZERO) > 0) {
+                    throw new IllegalArgumentException("El pago de interés (S/ " + interesRecibido + ") excede el interés exigible programado de " + socio.getNombreCompleto());
+                }
+
+                for (CuotaPrestamo cuota : cuotasAProcesar) {
+                    BigDecimal cPag = capPorCuota.getOrDefault(cuota.getId(), BigDecimal.ZERO);
+                    BigDecimal iPag = intPorCuota.getOrDefault(cuota.getId(), BigDecimal.ZERO);
+
+                    if (cPag.compareTo(BigDecimal.ZERO) > 0 || iPag.compareTo(BigDecimal.ZERO) > 0) {
+                        cuota.fijarPago(cPag, iPag, BigDecimal.ZERO, periodo.getFechaReunion());
+                    } else {
+                        cuota.revertirPago();
+                    }
+                    cuotaPrestamoRepository.save(cuota);
+                    prestamosAfectados.add(cuota.getPrestamo());
+                }
+            }
+
+            for (Prestamo prestamo : prestamosAfectados) {
+                prestamo.verificarEstadoCancelacion();
+                prestamoRepository.save(prestamo);
+            }
+
+            // Actualizar o crear Operacion de INGRESO
+            if (totalIngreso.compareTo(BigDecimal.ZERO) > 0) {
+                if (opIngreso == null) {
+                    nextRecibo++;
+                    String desc = "Aportes y cobranzas " + periodo.getMes() + "/" + periodo.getAnio() + " - " + socio.getNombreCompleto();
+                    opIngreso = new Operacion(cajaId, periodoId, socio.getId(), FlujoTipo.INGRESO, periodo.getFechaReunion(), nextRecibo, desc, userId);
+                }
+
+                // Sincronizar cuotas abonadas
+                Set<UUID> cuotasProcesadasIds = cuotasAProcesar.stream().map(CuotaPrestamo::getId).collect(Collectors.toSet());
+                opIngreso.getDetalles().removeIf(d ->
+                        (Objects.equals(d.getConceptoId(), concCapCobrado.getId()) || Objects.equals(d.getConceptoId(), concIntRecibido.getId()))
+                        && (d.getCuotaId() == null || !cuotasProcesadasIds.contains(d.getCuotaId()))
+                );
+
+                for (CuotaPrestamo cuota : cuotasAProcesar) {
+                    BigDecimal cPag = capPorCuota.getOrDefault(cuota.getId(), BigDecimal.ZERO);
+                    BigDecimal iPag = intPorCuota.getOrDefault(cuota.getId(), BigDecimal.ZERO);
+                    opIngreso.sincronizarDetalle(concCapCobrado.getId(), cPag, cuota.getPrestamo().getId(), cuota.getId());
+                    opIngreso.sincronizarDetalle(concIntRecibido.getId(), iPag, cuota.getPrestamo().getId(), cuota.getId());
+                }
+
+                opIngreso.sincronizarDetalle(concAhorro.getId(), ahorro, null, null);
+                opIngreso.sincronizarDetalle(concAccion.getId(), acciones, null, null);
+                opIngreso.sincronizarDetalle(concTardanza.getId(), tardanza, null, null);
+                opIngreso.sincronizarDetalle(concReserva.getId(), reservas, null, null);
+
+                operacionRepository.save(opIngreso);
+            } else {
+                if (opIngreso != null) {
+                    opIngreso.anular(userId, "Sin movimientos en este periodo");
+                    operacionRepository.save(opIngreso);
+                }
+            }
+        }
+
+        auditService.registrar(
+                cajaId,
+                userId,
+                UserRole.ADMIN,
+                "PLANILLA_ACTUALIZADA",
+                "periodo",
+                periodoId,
+                null,
+                Map.of("filasActualizadas", req.filas().size()),
+                "127.0.0.1",
+                "Internal"
+        );
+
+        return obtenerPlanillaMensual(periodoId);
     }
 
     // ==========================================
@@ -906,8 +1470,19 @@ public class CajaService {
         return UUID.fromString("a0000000-0000-0000-0000-000000000001");
     }
 
+    private boolean esCuotaAdelanto(CuotaPrestamo cp, Periodo periodo) {
+        if (cp.getFechaVencimiento().getYear() > periodo.getAnio()) {
+            return true;
+        }
+        if (cp.getFechaVencimiento().getYear() == periodo.getAnio() && cp.getFechaVencimiento().getMonthValue() > periodo.getMes()) {
+            return true;
+        }
+        return false;
+    }
+
     private UUID getUserIdActual() {
         UserContext ctx = UserContextHolder.getContext();
         return (ctx != null) ? ctx.userId() : null;
     }
 }
+

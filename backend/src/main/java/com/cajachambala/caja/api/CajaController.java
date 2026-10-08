@@ -66,6 +66,23 @@ public class CajaController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/periodos/{id}/planilla")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PlanillaMensualResponse> guardarPlanilla(
+            @PathVariable UUID id,
+            @Valid @RequestBody GuardarPlanillaRequest request
+    ) {
+        PlanillaMensualResponse response = cajaService.guardarPlanilla(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/periodos/{id}/planilla/precargar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PlanillaMensualResponse> precargarPlanilla(@PathVariable UUID id) {
+        PlanillaMensualResponse response = cajaService.precargarPlanilla(id);
+        return ResponseEntity.ok(response);
+    }
+
     // ==========================================
     // Operaciones
     // ==========================================

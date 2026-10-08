@@ -22,7 +22,7 @@ import {
   Calculator,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatFecha } from "@/lib/utils";
 
 import {
   Card,
@@ -190,7 +190,8 @@ export default function PrestamosPage() {
         setResumen(await resResumen.json());
       }
       if (resSocios.ok) {
-        setSocios(await resSocios.json());
+        const sData = await resSocios.json();
+        setSocios(Array.isArray(sData) ? sData : sData.content || []);
       }
       if (resPeriodos.ok) {
         const pers = await resPeriodos.json();
@@ -537,6 +538,7 @@ export default function PrestamosPage() {
                 <TableRow>
                   <TableHead className="w-16">N°</TableHead>
                   <TableHead>Socio Titular</TableHead>
+                  <TableHead className="text-center">F. Desembolso</TableHead>
                   <TableHead className="text-right">Monto Principal</TableHead>
                   <TableHead className="text-center">Tasa Mes</TableHead>
                   <TableHead className="text-center">Plazo</TableHead>
@@ -549,14 +551,14 @@ export default function PrestamosPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
                       Cargando préstamos...
                     </TableCell>
                   </TableRow>
                 ) : prestamosFiltrados.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       No se encontraron préstamos con los filtros seleccionados
                     </TableCell>
                   </TableRow>
@@ -573,6 +575,9 @@ export default function PrestamosPage() {
                         <div className="text-xs text-muted-foreground">
                           {p.socioCodigo ? `Socio #${p.socioCodigo}` : "Cliente Externo"} • {p.socioDocumento}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center font-mono text-xs text-muted-foreground whitespace-nowrap">
+                        {formatFecha(p.fechaDesembolso)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         S/. {Number(p.montoPrincipal).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
@@ -637,23 +642,23 @@ export default function PrestamosPage() {
 
       {/* Modal: Nuevo Préstamo y Simulación Proforma */}
       <Dialog open={modalNuevo} onOpenChange={setModalNuevo}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-primary" />
+        <DialogContent className="sm:max-w-5xl lg:max-w-6xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8">
+          <DialogHeader className="pb-2 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Calculator className="h-6 w-6 text-primary" />
               Simulación y Registro de Nuevo Préstamo
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm text-muted-foreground">
               Calcule las cuotas mensuales bajo el Sistema Alemán (Capital Fijo + Interés sobre saldo deudor) antes de solicitar.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCrearSolicitud} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="socioId">Socio Titular *</Label>
+          <form onSubmit={handleCrearSolicitud} className="space-y-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="space-y-2 md:col-span-2 lg:col-span-2">
+                <Label htmlFor="socioId" className="text-sm font-semibold">Socio Titular *</Label>
                 <Select value={formSocioId} onValueChange={setFormSocioId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Seleccione el socio titular..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -667,12 +672,13 @@ export default function PrestamosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="monto">Monto Principal (S/.) *</Label>
+                <Label htmlFor="monto" className="text-sm font-semibold">Monto Principal (S/.) *</Label>
                 <Input
                   id="monto"
                   type="number"
                   step="0.01"
                   min="1"
+                  className="h-10 text-base"
                   value={formMonto}
                   onChange={(e) => setFormMonto(e.target.value)}
                   placeholder="Ej: 1000.00"
@@ -681,9 +687,9 @@ export default function PrestamosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tasa">Tasa Mensual (0.05 = 5%) *</Label>
+                <Label htmlFor="tasa" className="text-sm font-semibold">Tasa Mensual *</Label>
                 <Select value={formTasa} onValueChange={setFormTasa}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Seleccione tasa..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -696,12 +702,13 @@ export default function PrestamosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cuotas">Plazo en Cuotas Mensuales *</Label>
+                <Label htmlFor="cuotas" className="text-sm font-semibold">Plazo en Cuotas Mensuales *</Label>
                 <Input
                   id="cuotas"
                   type="number"
                   min="1"
                   max="60"
+                  className="h-10"
                   value={formCuotas}
                   onChange={(e) => setFormCuotas(e.target.value)}
                   placeholder="Ej: 4"
@@ -710,10 +717,11 @@ export default function PrestamosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fechaDesembolso">Fecha Estimada de Desembolso</Label>
+                <Label htmlFor="fechaDesembolso" className="text-sm font-semibold">Fecha Estimada Desembolso *</Label>
                 <Input
                   id="fechaDesembolso"
                   type="date"
+                  className="h-10"
                   value={formFechaDesembolso}
                   onChange={(e) => setFormFechaDesembolso(e.target.value)}
                   required
@@ -721,20 +729,22 @@ export default function PrestamosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fecha1ra">Fecha Vencimiento 1ra Cuota (Día 8)</Label>
+                <Label htmlFor="fecha1ra" className="text-sm font-semibold">Vencimiento 1ra Cuota (Día 8) *</Label>
                 <Input
                   id="fecha1ra"
                   type="date"
+                  className="h-10"
                   value={formFecha1raCuota}
                   onChange={(e) => setFormFecha1raCuota(e.target.value)}
                   required
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="proposito">Propósito o Destino del Préstamo</Label>
+              <div className="space-y-2 md:col-span-2 lg:col-span-2">
+                <Label htmlFor="proposito" className="text-sm font-semibold">Propósito o Destino del Préstamo</Label>
                 <Input
                   id="proposito"
+                  className="h-10"
                   value={formProposito}
                   onChange={(e) => setFormProposito(e.target.value)}
                   placeholder="Ej: Compra de mercadería / Capital de trabajo"
@@ -742,26 +752,28 @@ export default function PrestamosPage() {
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-2 border-t">
+            <div className="flex flex-wrap justify-between items-center gap-3 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
+                className="h-10 px-4 font-medium"
                 onClick={handleSimular}
                 disabled={simulando}
               >
-                <Calculator className="h-4 w-4 mr-1 text-primary" />
+                <Calculator className="h-4 w-4 mr-2 text-primary" />
                 {simulando ? "Calculando..." : "Simular Cronograma"}
               </Button>
 
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
+                  className="h-10 px-4"
                   onClick={() => setModalNuevo(false)}
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={guardando}>
+                <Button type="submit" className="h-10 px-5 font-semibold" disabled={guardando}>
                   {guardando ? "Registrando..." : "Registrar Solicitud"}
                 </Button>
               </div>
@@ -770,47 +782,49 @@ export default function PrestamosPage() {
 
           {/* Tabla de Simulación en Vivo */}
           {simulacion && (
-            <div className="mt-4 pt-4 border-t space-y-3">
-              <div className="flex flex-wrap items-center justify-between bg-muted/40 p-3 rounded-lg text-sm">
-                <div>
-                  <span className="text-muted-foreground">Principal: </span>
-                  <span className="font-semibold">S/. {simulacion.montoPrincipal.toFixed(2)}</span>
+            <div className="mt-4 pt-4 border-t space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-muted/40 p-4 rounded-xl border">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider block">Monto Principal</span>
+                  <span className="text-lg font-bold">S/. {simulacion.montoPrincipal.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Total Interés: </span>
-                  <span className="font-semibold text-emerald-600">S/. {simulacion.totalInteres.toFixed(2)}</span>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider block">Total Interés</span>
+                  <span className="text-lg font-bold text-emerald-600">S/. {simulacion.totalInteres.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Total a Pagar: </span>
-                  <span className="font-semibold text-primary">S/. {simulacion.totalPagar.toFixed(2)}</span>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider block">Total a Pagar</span>
+                  <span className="text-lg font-bold text-primary">S/. {simulacion.totalPagar.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Tasa: </span>
-                  <Badge variant="outline">{simulacion.tasaPorcentaje}% mensual</Badge>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider block">Tasa Mensual</span>
+                  <div className="pt-1">
+                    <Badge variant="outline" className="font-semibold text-xs">{simulacion.tasaPorcentaje}% mensual</Badge>
+                  </div>
                 </div>
               </div>
 
-              <div className="max-h-60 overflow-y-auto border rounded-md">
+              <div className="max-h-72 overflow-y-auto border rounded-xl shadow-xs">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/50 sticky top-0">
                     <TableRow>
-                      <TableHead className="w-12 text-center">N°</TableHead>
-                      <TableHead>Vencimiento</TableHead>
-                      <TableHead className="text-right">Capital</TableHead>
-                      <TableHead className="text-right">Interés</TableHead>
-                      <TableHead className="text-right">Cuota Total</TableHead>
-                      <TableHead className="text-right">Saldo Restante</TableHead>
+                      <TableHead className="w-14 text-center font-bold">N°</TableHead>
+                      <TableHead className="font-bold">Fecha Vencimiento</TableHead>
+                      <TableHead className="text-right font-bold">Capital Amortizado</TableHead>
+                      <TableHead className="text-right font-bold">Interés Compensatorio</TableHead>
+                      <TableHead className="text-right font-bold">Cuota Mensual</TableHead>
+                      <TableHead className="text-right font-bold">Saldo Deudor Restante</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {simulacion.cronograma.map((c) => (
-                      <TableRow key={c.nroCuota}>
-                        <TableCell className="text-center font-medium">{c.nroCuota}</TableCell>
-                        <TableCell>{c.fechaVencimiento}</TableCell>
-                        <TableCell className="text-right">S/. {c.capitalProgramado.toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-emerald-600">S/. {c.interesProgramado.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-semibold">S/. {c.cuotaProgramada.toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">S/. {c.saldoRestante.toFixed(2)}</TableCell>
+                      <TableRow key={c.nroCuota} className="hover:bg-muted/30">
+                        <TableCell className="text-center font-semibold">{c.nroCuota}</TableCell>
+                        <TableCell className="font-mono text-xs">{formatFecha(c.fechaVencimiento)}</TableCell>
+                        <TableCell className="text-right font-mono">S/. {c.capitalProgramado.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-emerald-600">S/. {c.interesProgramado.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono font-bold text-foreground">S/. {c.cuotaProgramada.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-muted-foreground">S/. {c.saldoRestante.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -897,7 +911,7 @@ export default function PrestamosPage() {
                     .filter((p) => p.estado === "ABIERTO")
                     .map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.mes}/{p.anio} (Asamblea: {p.fechaReunion}) - Abierto
+                        {p.mes < 10 ? `0${p.mes}` : p.mes}/{p.anio} (Asamblea: {formatFecha(p.fechaReunion)}) - Abierto
                       </SelectItem>
                     ))}
                 </SelectContent>

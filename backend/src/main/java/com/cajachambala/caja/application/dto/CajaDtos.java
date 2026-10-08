@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -141,6 +142,21 @@ public class CajaDtos {
             Instant createdAt
     ) {}
 
+    public record DetalleCuotaPlanilla(
+            UUID prestamoId,
+            Integer prestamoNumero,
+            UUID cuotaId,
+            Integer cuotaNro,
+            Integer cuotasTotal,
+            LocalDate fechaVencimiento,
+            BigDecimal capitalProgramado,
+            BigDecimal interesProgramado,
+            BigDecimal capitalPagado,
+            BigDecimal interesPagado,
+            Boolean esAdelanto,
+            String estado
+    ) {}
+
     public record FilaPlanillaMensual(
             Integer nroRecibo,
             UUID socioId,
@@ -165,7 +181,72 @@ public class CajaDtos {
             BigDecimal totalEgreso,
             // Operaciones asociadas
             UUID operacionIngresoId,
-            UUID operacionEgresoId
+            UUID operacionEgresoId,
+            UUID prestamoId,
+            // Campos interactivos para validación y edición
+            Boolean accionesPagado,
+            Boolean cuotaPagada,
+            BigDecimal cuotaCapitalProgramado,
+            BigDecimal cuotaInteresProgramado,
+            UUID cuotaId,
+            Integer cuotaNro,
+            Integer cuotasTotal,
+            Integer prestamoNumero,
+            List<DetalleCuotaPlanilla> detallesPrestamos,
+            List<DetalleCuotaPlanilla> cuotasDisponiblesAdelanto
+    ) {
+        public FilaPlanillaMensual(
+                Integer nroRecibo,
+                UUID socioId,
+                String socioNombre,
+                Integer socioCodigo,
+                BigDecimal ahorro,
+                BigDecimal pagoCapital,
+                BigDecimal interesRecibido,
+                BigDecimal acciones,
+                BigDecimal tardanzaMulta,
+                BigDecimal reservas,
+                BigDecimal totalIngreso,
+                BigDecimal retiroAhorro,
+                BigDecimal prestamo,
+                BigDecimal interesPagado,
+                BigDecimal gastoAdmin,
+                BigDecimal utilidad,
+                BigDecimal red,
+                BigDecimal otroEgreso,
+                BigDecimal totalEgreso,
+                UUID operacionIngresoId,
+                UUID operacionEgresoId,
+                UUID prestamoId,
+                Boolean accionesPagado,
+                Boolean cuotaPagada,
+                BigDecimal cuotaCapitalProgramado,
+                BigDecimal cuotaInteresProgramado,
+                UUID cuotaId,
+                Integer cuotaNro,
+                Integer cuotasTotal,
+                Integer prestamoNumero
+        ) {
+            this(nroRecibo, socioId, socioNombre, socioCodigo, ahorro, pagoCapital, interesRecibido, acciones, tardanzaMulta, reservas, totalIngreso, retiroAhorro, prestamo, interesPagado, gastoAdmin, utilidad, red, otroEgreso, totalEgreso, operacionIngresoId, operacionEgresoId, prestamoId, accionesPagado, cuotaPagada, cuotaCapitalProgramado, cuotaInteresProgramado, cuotaId, cuotaNro, cuotasTotal, prestamoNumero, Collections.emptyList(), Collections.emptyList());
+        }
+    }
+
+    public record GuardarFilaPlanillaRequest(
+            UUID socioId,
+            BigDecimal ahorro,
+            BigDecimal pagoCapital,
+            BigDecimal interesRecibido,
+            BigDecimal acciones,
+            BigDecimal tardanzaMulta,
+            BigDecimal reservas,
+            Boolean accionesPagado,
+            Boolean cuotaPagada,
+            UUID cuotaId,
+            UUID prestamoId
+    ) {}
+
+    public record GuardarPlanillaRequest(
+            List<GuardarFilaPlanillaRequest> filas
     ) {}
 
     public record PlanillaMensualResponse(

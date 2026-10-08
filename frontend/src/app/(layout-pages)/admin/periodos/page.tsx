@@ -18,7 +18,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatFecha, formatSoles } from "@/lib/utils";
 
 import {
   Card,
@@ -36,6 +36,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -191,6 +192,14 @@ export default function PeriodosPage() {
 
   const periodoAbierto = periodos.find((p) => p.estado === "ABIERTO");
 
+  const totalIngresosHistorico = React.useMemo(() => {
+    return periodos.reduce((acc, p) => acc + Number(p.totalIngresos || 0), 0);
+  }, [periodos]);
+
+  const totalEgresosHistorico = React.useMemo(() => {
+    return periodos.reduce((acc, p) => acc + Number(p.totalEgresos || 0), 0);
+  }, [periodos]);
+
   return (
     <div className="space-y-6">
       {/* Encabezado */}
@@ -240,7 +249,7 @@ export default function PeriodosPage() {
                   {MESES[periodoAbierto.mes - 1]} {periodoAbierto.anio}
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
-                  Reunión mensual programada: {periodoAbierto.fechaReunion} (Día fijo 8)
+                  Reunión mensual programada: {formatFecha(periodoAbierto.fechaReunion)} (Día fijo 8)
                 </CardDescription>
               </div>
 
@@ -258,8 +267,8 @@ export default function PeriodosPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl border bg-muted/30">
                 <p className="text-xs font-medium text-muted-foreground">Saldo Inicial Mes</p>
-                <p className="text-xl font-bold mt-1 text-foreground">
-                  S/. {Number(periodoAbierto.saldoAnterior).toFixed(2)}
+                <p className="text-xl font-bold mt-1 text-foreground font-mono">
+                  {formatSoles(periodoAbierto.saldoAnterior)}
                 </p>
               </div>
 
@@ -267,8 +276,8 @@ export default function PeriodosPage() {
                 <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                   <TrendingUp className="h-3.5 w-3.5" /> Ingresos del Mes
                 </p>
-                <p className="text-xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
-                  + S/. {Number(periodoAbierto.totalIngresos).toFixed(2)}
+                <p className="text-xl font-bold mt-1 text-emerald-600 dark:text-emerald-400 font-mono">
+                  +{formatSoles(periodoAbierto.totalIngresos)}
                 </p>
               </div>
 
@@ -276,8 +285,8 @@ export default function PeriodosPage() {
                 <p className="text-xs font-medium text-destructive flex items-center gap-1">
                   <TrendingDown className="h-3.5 w-3.5" /> Egresos del Mes
                 </p>
-                <p className="text-xl font-bold mt-1 text-destructive">
-                  - S/. {Number(periodoAbierto.totalEgresos).toFixed(2)}
+                <p className="text-xl font-bold mt-1 text-destructive font-mono">
+                  -{formatSoles(periodoAbierto.totalEgresos)}
                 </p>
               </div>
 
@@ -285,8 +294,8 @@ export default function PeriodosPage() {
                 <p className="text-xs font-medium text-primary flex items-center gap-1">
                   <Wallet className="h-3.5 w-3.5" /> Saldo Proyectado
                 </p>
-                <p className="text-xl font-bold mt-1 text-primary">
-                  S/. {Number(periodoAbierto.saldoFinal).toFixed(2)}
+                <p className="text-xl font-bold mt-1 text-primary font-mono">
+                  {formatSoles(periodoAbierto.saldoFinal)}
                 </p>
               </div>
             </div>
@@ -337,7 +346,7 @@ export default function PeriodosPage() {
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Saldo Inicial</TableHead>
                 <TableHead className="text-right">Ingresos</TableHead>
-                <TableHead className="text-right">Egresos</TableHead>
+                <TableHead className="text-right">Egresos (Préstamos)</TableHead>
                 <TableHead className="text-right">Saldo Final</TableHead>
                 <TableHead className="text-center">Acciones</TableHead>
               </TableRow>
@@ -368,8 +377,8 @@ export default function PeriodosPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {p.fechaReunion}
+                      <TableCell className="text-xs font-mono text-muted-foreground">
+                        {formatFecha(p.fechaReunion)}
                       </TableCell>
                       <TableCell>
                         {abierto ? (
@@ -382,17 +391,31 @@ export default function PeriodosPage() {
                           </Badge>
                         )}
                       </TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {formatSoles(p.saldoAnterior)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        +{formatSoles(p.totalIngresos)}
+                      </TableCell>
                       <TableCell className="text-right font-mono text-xs">
-                        S/. {Number(p.saldoAnterior).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">
-                        +S/. {Number(p.totalIngresos).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-destructive">
-                        -S/. {Number(p.totalEgresos).toFixed(2)}
+                        <div className={cn(
+                          Number(p.totalEgresos) > 0 ? "text-rose-600 dark:text-rose-400 font-semibold" : "text-muted-foreground"
+                        )}>
+                          {Number(p.totalEgresos) > 0 ? `-${formatSoles(p.totalEgresos)}` : formatSoles(0)}
+                        </div>
+                        {Number(p.totalEgresos) > 0 && (
+                          <div className="text-[10px] text-muted-foreground font-sans">
+                            Préstamos colocados
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs font-semibold">
-                        S/. {Number(p.saldoFinal).toFixed(2)}
+                        <span className={cn(
+                          "px-2 py-0.5 rounded",
+                          Number(p.saldoFinal) > 0 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold" : "text-foreground"
+                        )}>
+                          {formatSoles(p.saldoFinal)}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -429,6 +452,24 @@ export default function PeriodosPage() {
                 })
               )}
             </TableBody>
+            {periodos.length > 0 && (
+              <TableFooter className="bg-muted/40 font-semibold text-xs border-t-2">
+                <TableRow>
+                  <TableCell colSpan={3} className="text-right font-bold text-muted-foreground uppercase text-[11px] tracking-wider">
+                    Totales Acumulados ({periodos.length} meses):
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-muted-foreground">-</TableCell>
+                  <TableCell className="text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    +{formatSoles(totalIngresosHistorico)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                    -{formatSoles(totalEgresosHistorico)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-bold text-foreground">-</TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </CardContent>
       </Card>

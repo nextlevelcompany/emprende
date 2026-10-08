@@ -5,13 +5,9 @@ import { useEffect, useState } from "react"
 import { Menu } from "@boxicons/react"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { NotificationDropdown } from "@/components/notification-dropdown"
-import { AppLauncherDropdown } from "@/components/appLauncher-dropdown"
-import { LanguageDropdown } from "@/components/language-dropdown"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { GlobalSearch } from "@/components/global-search"
 import { UserDropdown } from "@/components/UserDropdown"
-import { CartDropdown } from "@/components/CartDropdown"
 
 import Footer from "@/components/layout/Footer"
 
@@ -35,13 +31,14 @@ function LayoutContent({
   const { toggleSidebar } = useSidebar()
 
   return (
-    <SidebarInset>
+    <SidebarInset className="min-w-0 max-w-full">
       <header
         className={cn(
-          "sticky top-0 z-40 flex h-16 w-full shrink-0 items-center gap-2 border-b px-6 shadow-sm transition-all duration-200",
+          "sticky top-0 z-40 flex h-16 w-full shrink-0 items-center gap-2 border-b px-6 transition-all duration-200",
+          "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85",
           scrolled
-            ? "bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-md"
-            : "bg-background"
+            ? "shadow-md border-border/80"
+            : "shadow-sm border-border"
         )}
       >
         {/* Left */}
@@ -59,17 +56,13 @@ function LayoutContent({
         </div>
 
         {/* Right */}
-        <div className="ml-auto flex items-center gap-1">
-          <LanguageDropdown />
+        <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
-          <AppLauncherDropdown />
-          <NotificationDropdown />
-          <CartDropdown />
           <UserDropdown />
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col p-6 bg-muted">
+      <div className="flex flex-1 flex-col p-4 md:p-6 bg-muted min-w-0 max-w-full">
         {children}
       </div>
 

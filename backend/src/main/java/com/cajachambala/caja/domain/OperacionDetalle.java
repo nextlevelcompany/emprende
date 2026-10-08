@@ -59,4 +59,8 @@ public class OperacionDetalle {
     public BigDecimal getMonto() { return monto; }
     public UUID getPrestamoId() { return prestamoId; }
     public UUID getCuotaId() { return cuotaId; }
+
+    public void setMonto(BigDecimal monto) {
+        this.monto = monto;
+    }
 }

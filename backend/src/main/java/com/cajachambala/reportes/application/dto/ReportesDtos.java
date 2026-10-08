@@ -185,7 +185,15 @@ public class ReportesDtos {
             Short ejercicio,
             int acciones,
             BigDecimal monto,
-            Instant fechaPago
+            LocalDate fechaPago,
+            BigDecimal capitalSocial,
+            BigDecimal capitalDevuelto,
+            BigDecimal totalCobrado,
+            String estadoAcciones,
+            String modalidad,
+            BigDecimal montoCobrado,
+            BigDecimal montoReinvertido,
+            Integer accionesCompradas
     ) {}
 
     public record SocioMovimientoDto(

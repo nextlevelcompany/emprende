@@ -6,6 +6,11 @@ import com.cajachambala.caja.infrastructure.persistence.*;
 import com.cajachambala.identidad.infrastructure.audit.AuditService;
 import com.cajachambala.shared.infrastructure.security.UserContext;
 import com.cajachambala.shared.infrastructure.security.UserContextHolder;
+import com.cajachambala.prestamos.domain.CuotaEstado;
+import com.cajachambala.prestamos.domain.CuotaPrestamo;
+import com.cajachambala.prestamos.domain.Prestamo;
+import com.cajachambala.prestamos.infrastructure.persistence.CuotaPrestamoRepository;
+import com.cajachambala.prestamos.infrastructure.persistence.PrestamoRepository;
 import com.cajachambala.socios.domain.Socio;
 import com.cajachambala.socios.domain.SocioEstado;
 import com.cajachambala.socios.domain.SocioTipo;
@@ -48,6 +53,12 @@ class CajaServiceTest {
 
     @Mock
     private SocioRepository socioRepository;
+
+    @Mock
+    private PrestamoRepository prestamoRepository;
+
+    @Mock
+    private CuotaPrestamoRepository cuotaPrestamoRepository;
 
     @Mock
     private AuditService auditService;
@@ -281,6 +292,7 @@ class CajaServiceTest {
                 .thenReturn(List.of(opIngreso, opEgreso));
         when(socioRepository.findByCajaIdAndDeletedAtIsNullOrderByCodigoAsc(cajaId)).thenReturn(List.of(socio));
         when(conceptoRepository.findAll()).thenReturn(List.of(concAhorro, concPrestamo));
+        when(cuotaPrestamoRepository.findPendientesVigentesPorCaja(cajaId)).thenReturn(Collections.emptyList());
 
         PlanillaMensualResponse planilla = cajaService.obtenerPlanillaMensual(periodoId);
 
@@ -296,5 +308,84 @@ class CajaServiceTest {
         assertThat(planilla.totalIngresosMes()).isEqualByComparingTo(new BigDecimal("100.00"));
         assertThat(planilla.totalEgresosMes()).isEqualByComparingTo(new BigDecimal("500.00"));
         assertThat(planilla.saldoFinal()).isEqualByComparingTo(new BigDecimal("-400.00"));
+    }
+
+    @Test
+    @DisplayName("Debe guardar planilla distribuyendo el pago consolidado entre múltiples préstamos del socio")
+    void debeGuardarPlanillaDistribuyendoCuotasDeMultiplesPrestamos() {
+        UUID periodoId = UUID.randomUUID();
+        LocalDate fecha = LocalDate.of(2026, 10, 8);
+        Periodo periodo = new Periodo(cajaId, (short) 2026, (short) 10, fecha);
+
+        Socio socio = new Socio(cajaId, 15, SocioTipo.SOCIO, "MIRTHA ROSA", "ALANYA HUAMAN", "DNI", "enc".getBytes(), "hash", null, null, null, LocalDate.now(), userId);
+        UUID socioId = socio.getId();
+
+        Concepto concAccion = new Concepto((short) 1, "ACCION", "Acción", FlujoTipo.INGRESO, true, (short) 1);
+        Concepto concCapCobrado = new Concepto((short) 2, "PAGO_CAPITAL", "Pago Capital", FlujoTipo.INGRESO, true, (short) 2);
+        Concepto concIntRecibido = new Concepto((short) 3, "INTERES_RECIBIDO", "Interés Recibido", FlujoTipo.INGRESO, true, (short) 3);
+        Concepto concAhorro = new Concepto((short) 4, "DEPOSITO_AHORRO", "Depósito Ahorro", FlujoTipo.INGRESO, true, (short) 4);
+        Concepto concTardanza = new Concepto((short) 5, "MULTA_TARDANZA", "Tardanza", FlujoTipo.INGRESO, true, (short) 5);
+        Concepto concReserva = new Concepto((short) 6, "RESERVA", "Reserva", FlujoTipo.INGRESO, true, (short) 6);
+
+        Prestamo p70 = new Prestamo(cajaId, socioId, 70, new BigDecimal("11849.78"), new BigDecimal("0.03"), (short) 12, LocalDate.of(2026, 7, 8), LocalDate.of(2026, 8, 8), "Crédito 70", userId);
+        CuotaPrestamo c70 = new CuotaPrestamo(p70, (short) 3, fecha, new BigDecimal("987.48"), new BigDecimal("296.24"));
+        p70.agregarCuota(c70);
+
+        Prestamo p72 = new Prestamo(cajaId, socioId, 72, new BigDecimal("8156.92"), new BigDecimal("0.03"), (short) 11, LocalDate.of(2026, 8, 8), LocalDate.of(2026, 9, 8), "Crédito 72", userId);
+        CuotaPrestamo c72 = new CuotaPrestamo(p72, (short) 2, fecha, new BigDecimal("741.54"), new BigDecimal("222.46"));
+        p72.agregarCuota(c72);
+
+        when(periodoRepository.findByIdAndCajaId(periodoId, cajaId)).thenReturn(Optional.of(periodo));
+        when(conceptoRepository.findByCodigo("ACCION")).thenReturn(Optional.of(concAccion));
+        when(conceptoRepository.findByCodigo("PAGO_CAPITAL")).thenReturn(Optional.of(concCapCobrado));
+        when(conceptoRepository.findByCodigo("INTERES_RECIBIDO")).thenReturn(Optional.of(concIntRecibido));
+        when(conceptoRepository.findByCodigo("DEPOSITO_AHORRO")).thenReturn(Optional.of(concAhorro));
+        when(conceptoRepository.findByCodigo("MULTA_TARDANZA")).thenReturn(Optional.of(concTardanza));
+        when(conceptoRepository.findByCodigo("RESERVA")).thenReturn(Optional.of(concReserva));
+
+        when(operacionRepository.findByCajaIdAndPeriodoIdAndEstadoOrderByFechaAscNroReciboAsc(cajaId, periodoId, OperacionEstado.VIGENTE))
+                .thenReturn(Collections.emptyList());
+        when(socioRepository.findByIdAndCajaId(socioId, cajaId)).thenReturn(Optional.of(socio));
+
+        when(cuotaPrestamoRepository.findPendientesVigentesPorSocio(cajaId, socioId))
+                .thenReturn(List.of(c70, c72));
+
+        // Para el retorno de obtenerPlanillaMensual
+        when(socioRepository.findByCajaIdAndDeletedAtIsNullOrderByCodigoAsc(cajaId)).thenReturn(List.of(socio));
+        when(conceptoRepository.findAll()).thenReturn(List.of(concAccion, concCapCobrado, concIntRecibido));
+        when(cuotaPrestamoRepository.findPendientesVigentesPorCaja(cajaId)).thenReturn(Collections.emptyList());
+        when(periodoRepository.findByCajaIdOrderByAnioDescMesDesc(cajaId)).thenReturn(List.of(periodo));
+
+        GuardarFilaPlanillaRequest filaReq = new GuardarFilaPlanillaRequest(
+                socioId,
+                BigDecimal.ZERO,
+                new BigDecimal("1729.02"), // Suma de capital de p70 y p72
+                new BigDecimal("518.70"),  // Suma de interés de p70 y p72
+                new BigDecimal("30.00"),
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                true,
+                true,
+                c72.getId(), // Puede venir el ID de una sola cuota desde la grilla
+                p72.getId()
+        );
+
+        PlanillaMensualResponse resp = cajaService.guardarPlanilla(periodoId, new GuardarPlanillaRequest(List.of(filaReq)));
+
+        assertThat(resp).isNotNull();
+        // Verificar que ambas cuotas quedaron pagadas sin superar sus topes programados
+        assertThat(c70.getCapitalPagado()).isEqualByComparingTo(new BigDecimal("987.48"));
+        assertThat(c70.getInteresPagado()).isEqualByComparingTo(new BigDecimal("296.24"));
+        assertThat(c70.getEstado()).isEqualTo(CuotaEstado.PAGADA);
+
+        assertThat(c72.getCapitalPagado()).isEqualByComparingTo(new BigDecimal("741.54"));
+        assertThat(c72.getInteresPagado()).isEqualByComparingTo(new BigDecimal("222.46"));
+        assertThat(c72.getEstado()).isEqualTo(CuotaEstado.PAGADA);
+
+        verify(operacionRepository).save(argThat(op -> {
+            boolean tieneCapP70 = op.getDetalles().stream().anyMatch(d -> d.getMonto().compareTo(new BigDecimal("987.48")) == 0 && Objects.equals(d.getCuotaId(), c70.getId()));
+            boolean tieneCapP72 = op.getDetalles().stream().anyMatch(d -> d.getMonto().compareTo(new BigDecimal("741.54")) == 0 && Objects.equals(d.getCuotaId(), c72.getId()));
+            return tieneCapP70 && tieneCapP72;
+        }));
     }
 }

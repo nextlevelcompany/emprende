@@ -20,7 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatFecha } from "@/lib/utils";
 
 import {
   Card,
@@ -65,6 +65,10 @@ interface DetalleDistribucion {
   acciones: number;
   porcentajeParticipacion: number;
   monto: number;
+  montoCobrado?: number;
+  montoReinvertido?: number;
+  accionesCompradas?: number;
+  modalidad?: string;
   operacionId: string | null;
 }
 
@@ -77,6 +81,9 @@ interface Distribucion {
   totalAcciones: number;
   valorPorAccion: number;
   estado: "BORRADOR" | "APROBADA" | "PAGADA";
+  totalCobrado?: number;
+  totalReinvertido?: number;
+  totalAccionesCompradas?: number;
   detalles: DetalleDistribucion[];
   createdAt: string;
   updatedAt: string;
@@ -151,7 +158,8 @@ export default function UtilidadesPage() {
         setResumen(await resResumen.json());
       }
       if (resSocios.ok) {
-        const sList: SocioSimple[] = await resSocios.json();
+        const raw = await resSocios.json();
+        const sList: SocioSimple[] = Array.isArray(raw) ? raw : raw?.content || [];
         setSocios(sList);
 
         // Inicializar acciones (ej. 10 acciones por defecto a S/. 30 = S/. 300)
@@ -358,64 +366,72 @@ export default function UtilidadesPage() {
         </div>
       </div>
 
+      {/* Banner Explicativo de la Regla de Distribución de Utilidades */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-900 dark:text-blue-300 flex items-start gap-2.5">
+        <AlertCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+        <div>
+          <span className="font-semibold">Regla Oficial de Distribución de Utilidades:</span> Al cierre de cada ejercicio, las acciones aportadas por los socios <strong>permanecen como capital social activo en la Caja Comunal</strong>. Lo único que se distribuye y liquida anualmente son las <strong>Utilidades generadas</strong>. Cada socio puede cobrar su utilidad en efectivo o reinvertir parte o el total para adquirir nuevas acciones para el siguiente ejercicio.
+        </div>
+      </div>
+
       {/* Tarjetas de Métricas de Ejercicio */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-emerald-500/20 bg-emerald-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Utilidad Ejercicio 2024</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Utilidades Históricas</CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">
-              S/. {(resumen?.utilidadNetaCaja ?? 0).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+            <div className="text-2xl font-bold text-emerald-700">
+              S/. {distribuciones.reduce((acc, d) => acc + Number(d.utilidadTotal), 0).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Ingresos: S/. {(resumen?.totalIngresos ?? 0).toFixed(2)} | Egresos: S/. {(resumen?.totalEgresos ?? 0).toFixed(2)}
+              {distribuciones.length} ejercicios liquidados (2024 - 2026)
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-amber-500/20 bg-amber-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Socios Activos</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium">Capital Social en Acciones</CardTitle>
+            <Coins className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {resumen?.totalSociosActivos ?? 0}
+            <div className="text-2xl font-bold text-amber-700">
+              S/. {((distribuciones[0]?.totalAcciones || 0) * 30).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Padrón con derecho a dividendos anuales
+              {distribuciones[0]?.totalAcciones || 0} acciones activas en último ejercicio
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-purple-500/20 bg-purple-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Nominal Acción</CardTitle>
-            <Coins className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Cobrado en Efectivo</CardTitle>
+            <TrendingUp className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              S/. 30.00
+            <div className="text-2xl font-bold text-purple-700">
+              S/. {distribuciones.reduce((acc, d) => acc + Number(d.totalCobrado ?? (Number(d.utilidadTotal) - (Number(d.totalReinvertido) || 0))), 0).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Definido en el estatuto comunal de Chambala
+              Utilidades cobradas en efectivo acumuladas
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-blue-500/20 bg-blue-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ejercicios Registrados</CardTitle>
-            <PieChart className="h-4 w-4 text-amber-600" />
+            <CardTitle className="text-sm font-medium">Reinvertido en Acciones</CardTitle>
+            <RefreshCw className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {distribuciones.length}
+            <div className="text-2xl font-bold text-blue-700">
+              S/. {distribuciones.reduce((acc, d) => acc + Number(d.totalReinvertido ?? 0), 0).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {distribuciones.filter((d) => d.estado === "PAGADA").length} liquidado(s) formalmente
+              +{distribuciones.reduce((acc, d) => acc + Number(d.totalAccionesCompradas ?? 0), 0)} nuevas acciones suscritas con dividendos
             </p>
           </CardContent>
         </Card>
@@ -426,9 +442,9 @@ export default function UtilidadesPage() {
         <CardHeader className="px-6 py-4 border-b">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Historial de Distribuciones de Utilidad</CardTitle>
+              <CardTitle className="text-base font-semibold">Historial de Distribuciones de Utilidad y Dividendos</CardTitle>
               <CardDescription>
-                Acuerdos anuales de asamblea, cómputo de dividendos y registros de liquidación en caja
+                Distribución anual de excedentes del ejercicio y reinversión voluntaria en acciones
               </CardDescription>
             </div>
             <span className="text-xs text-muted-foreground">
@@ -441,12 +457,14 @@ export default function UtilidadesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-24">Ejercicio</TableHead>
-                  <TableHead>Fecha Corte</TableHead>
-                  <TableHead className="text-right">Utilidad Aprobada</TableHead>
+                  <TableHead className="w-20">Ejercicio</TableHead>
+                  <TableHead>Período / Corte</TableHead>
                   <TableHead className="text-center">Total Acciones</TableHead>
-                  <TableHead className="text-right">Dividendo / Acción</TableHead>
-                  <TableHead className="text-center">Beneficiarios</TableHead>
+                  <TableHead className="text-right">Capital Acciones</TableHead>
+                  <TableHead className="text-right">Utilidad Aprobada</TableHead>
+                  <TableHead className="text-right">Cobrado Efectivo</TableHead>
+                  <TableHead className="text-right">Reinvertido Acciones</TableHead>
+                  <TableHead className="text-center">Socios</TableHead>
                   <TableHead className="text-center">Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -454,73 +472,103 @@ export default function UtilidadesPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
                       Cargando distribuciones de utilidad...
                     </TableCell>
                   </TableRow>
                 ) : distribuciones.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       No hay distribuciones registradas aún. Haga clic en &quot;Nueva Distribución&quot; para crear el ejercicio 2024.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  distribuciones.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-bold text-primary">
-                        {d.ejercicio}
-                      </TableCell>
-                      <TableCell>{d.fechaCorte}</TableCell>
-                      <TableCell className="text-right font-semibold text-emerald-600">
-                        S/. {Number(d.utilidadTotal).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="text-center font-medium">
-                        {d.totalAcciones} acciones
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        S/. {Number(d.valorPorAccion).toFixed(6)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {d.detalles?.length || 0} socios
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getBadgeEstado(d.estado)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {d.estado === "BORRADOR" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs text-blue-600 hover:text-blue-700"
-                              onClick={() => setModalAprobar(d)}
-                            >
-                              <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-                              Aprobar
-                            </Button>
+                  distribuciones.map((d) => {
+                    const capital = Number(d.totalAcciones) * 30;
+                    const utilidad = Number(d.utilidadTotal);
+                    const cobrado = Number(d.totalCobrado ?? (utilidad - (Number(d.totalReinvertido) || 0)));
+                    const reinvertido = Number(d.totalReinvertido ?? 0);
+                    const accCompradas = Number(d.totalAccionesCompradas ?? 0);
+                    return (
+                      <TableRow key={d.id}>
+                        <TableCell className="font-bold text-primary">
+                          {d.ejercicio}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="font-medium text-foreground">
+                            {d.ejercicio === 2024
+                              ? "Jul 2023 - Jun 2024"
+                              : d.ejercicio === 2025
+                              ? "Jun 2024 - May 2025"
+                              : "Jun 2025 - May 2026"}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground font-mono">
+                            Corte: {formatFecha(d.fechaCorte)} • Pago: 08/06/{d.ejercicio}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center font-medium">
+                          {d.totalAcciones} acc.
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-amber-700 dark:text-amber-400">
+                          S/. {capital.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-emerald-600">
+                          S/. {utilidad.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          S/. {cobrado.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {reinvertido > 0 ? (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20 font-medium text-xs">
+                              S/. {reinvertido.toFixed(2)} (+{accCompradas} acc)
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
-                          {d.estado === "APROBADA" && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                              onClick={() => setModalPagar(d)}
-                            >
-                              <Send className="h-3.5 w-3.5 mr-1" />
-                              Pagar en Caja
-                            </Button>
-                          )}
-                          <Link href={`/admin/utilidades/${d.id}`}>
-                            <Button variant="ghost" size="sm" className="h-8 text-xs">
-                              <FileText className="h-3.5 w-3.5 mr-1" />
-                              Detalle
-                            </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell className="text-center text-xs">
+                          {d.detalles?.length || 0} socios
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {getBadgeEstado(d.estado)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {d.estado === "BORRADOR" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs text-blue-600 hover:text-blue-700"
+                                onClick={() => setModalAprobar(d)}
+                              >
+                                <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                                Aprobar
+                              </Button>
+                            )}
+                            {d.estado === "APROBADA" && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={() => setModalPagar(d)}
+                              >
+                                <Send className="h-3.5 w-3.5 mr-1" />
+                                Pagar en Caja
+                              </Button>
+                            )}
+                            <Link href={`/admin/utilidades/${d.id}`}>
+                              <Button variant="ghost" size="sm" className="h-8 text-xs">
+                                <FileText className="h-3.5 w-3.5 mr-1" />
+                                Detalle
+                              </Button>
+                            </Link>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -777,7 +825,7 @@ export default function UtilidadesPage() {
                     .filter((p) => p.estado === "ABIERTO")
                     .map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.mes}/{p.anio} (Asamblea: {p.fechaReunion}) - Abierto
+                        {p.mes < 10 ? `0${p.mes}` : p.mes}/{p.anio} (Asamblea: {formatFecha(p.fechaReunion)}) - Abierto
                       </SelectItem>
                     ))}
                 </SelectContent>

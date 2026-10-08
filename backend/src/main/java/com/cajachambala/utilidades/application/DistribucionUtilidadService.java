@@ -138,6 +138,9 @@ public class DistribucionUtilidadService {
                 totalAcciones,
                 valorPorAccion,
                 DistribucionEstado.BORRADOR,
+                utilidad,
+                BigDecimal.ZERO,
+                0,
                 detalles,
                 null,
                 null
@@ -414,6 +417,10 @@ public class DistribucionUtilidadService {
                     acc,
                     porcentaje,
                     monto,
+                    monto,
+                    BigDecimal.ZERO,
+                    0,
+                    "EFECTIVO",
                     opId
             ));
         }
@@ -434,7 +441,10 @@ public class DistribucionUtilidadService {
         Map<UUID, Integer> accMap = d.getDetalles().stream()
                 .collect(Collectors.toMap(DistribucionUtilidadDetalle::getSocioId, DistribucionUtilidadDetalle::getAcciones));
 
-        List<DetalleDistribucionResponse> detalles = calcularRenglonesConAjuste(
+        Map<UUID, DistribucionUtilidadDetalle> detMap = d.getDetalles().stream()
+                .collect(Collectors.toMap(DistribucionUtilidadDetalle::getSocioId, det -> det));
+
+        List<DetalleDistribucionResponse> calculados = calcularRenglonesConAjuste(
                 accMap,
                 sociosMap,
                 d.getUtilidadTotal(),
@@ -442,6 +452,40 @@ public class DistribucionUtilidadService {
                 d.getValorPorAccion(),
                 opsMap
         );
+
+        List<DetalleDistribucionResponse> detalles = new ArrayList<>();
+        BigDecimal totalCobrado = BigDecimal.ZERO;
+        BigDecimal totalReinvertido = BigDecimal.ZERO;
+        int totalAccionesCompradas = 0;
+
+        for (DetalleDistribucionResponse calc : calculados) {
+            DistribucionUtilidadDetalle det = detMap.get(calc.socioId());
+            BigDecimal montoReal = (det != null && det.getMonto() != null) ? det.getMonto() : calc.monto();
+            BigDecimal cobrado = (det != null && det.getMontoCobrado() != null) ? det.getMontoCobrado() : montoReal;
+            BigDecimal reinv = (det != null && det.getMontoReinvertido() != null) ? det.getMontoReinvertido() : BigDecimal.ZERO;
+            int accComp = (det != null && det.getAccionesCompradas() != null) ? det.getAccionesCompradas() : 0;
+            String mod = (det != null && det.getModalidad() != null) ? det.getModalidad() :
+                    (reinv.compareTo(BigDecimal.ZERO) > 0 ? (cobrado.compareTo(BigDecimal.ZERO) > 0 ? "MIXTO" : "REINVERSION") : "EFECTIVO");
+
+            totalCobrado = totalCobrado.add(cobrado);
+            totalReinvertido = totalReinvertido.add(reinv);
+            totalAccionesCompradas += accComp;
+
+            detalles.add(new DetalleDistribucionResponse(
+                    calc.socioId(),
+                    calc.socioCodigo(),
+                    calc.socioNombreCompleto(),
+                    calc.socioDocumento(),
+                    calc.acciones(),
+                    calc.porcentajeParticipacion(),
+                    montoReal,
+                    cobrado,
+                    reinv,
+                    accComp,
+                    mod,
+                    calc.operacionId()
+            ));
+        }
 
         return new DistribucionResponse(
                 d.getId(),
@@ -452,6 +496,9 @@ public class DistribucionUtilidadService {
                 d.getTotalAcciones(),
                 d.getValorPorAccion(),
                 d.getEstado(),
+                totalCobrado,
+                totalReinvertido,
+                totalAccionesCompradas,
                 detalles,
                 d.getCreatedAt(),
                 d.getUpdatedAt()

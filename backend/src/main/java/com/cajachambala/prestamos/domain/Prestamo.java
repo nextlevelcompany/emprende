@@ -145,6 +145,16 @@ public class Prestamo {
         }
     }
 
+    public void verificarEstadoCancelacion() {
+        boolean todasPagadas = !cuotas.isEmpty() && cuotas.stream().allMatch(c -> c.getEstado() == CuotaEstado.PAGADA);
+        if (todasPagadas) {
+            this.estado = PrestamoEstado.CANCELADO;
+        } else if (this.estado == PrestamoEstado.CANCELADO) {
+            this.estado = PrestamoEstado.VIGENTE;
+        }
+        this.updatedAt = Instant.now();
+    }
+
     public void agregarCuota(CuotaPrestamo cuota) {
         this.cuotas.add(cuota);
         cuota.asignarPrestamo(this);

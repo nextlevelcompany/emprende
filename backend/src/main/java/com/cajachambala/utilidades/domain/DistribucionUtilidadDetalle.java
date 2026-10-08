@@ -23,6 +23,18 @@ public class DistribucionUtilidadDetalle {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal monto;
 
+    @Column(name = "monto_cobrado", precision = 14, scale = 2)
+    private BigDecimal montoCobrado;
+
+    @Column(name = "monto_reinvertido", precision = 14, scale = 2)
+    private BigDecimal montoReinvertido;
+
+    @Column(name = "acciones_compradas")
+    private Integer accionesCompradas;
+
+    @Column(name = "modalidad", length = 30)
+    private String modalidad;
+
     @Column(name = "operacion_id")
     private UUID operacionId;
 
@@ -35,9 +47,26 @@ public class DistribucionUtilidadDetalle {
             Integer acciones,
             BigDecimal monto
     ) {
+        this(distribucionId, socioId, acciones, monto, monto, BigDecimal.ZERO, 0, "EFECTIVO");
+    }
+
+    public DistribucionUtilidadDetalle(
+            UUID distribucionId,
+            UUID socioId,
+            Integer acciones,
+            BigDecimal monto,
+            BigDecimal montoCobrado,
+            BigDecimal montoReinvertido,
+            Integer accionesCompradas,
+            String modalidad
+    ) {
         this.id = new DistribucionDetalleId(distribucionId, socioId);
         this.acciones = acciones;
         this.monto = monto;
+        this.montoCobrado = montoCobrado != null ? montoCobrado : monto;
+        this.montoReinvertido = montoReinvertido != null ? montoReinvertido : BigDecimal.ZERO;
+        this.accionesCompradas = accionesCompradas != null ? accionesCompradas : 0;
+        this.modalidad = (modalidad != null && !modalidad.isBlank()) ? modalidad : "EFECTIVO";
     }
 
     public void asignarDistribucion(DistribucionUtilidad distribucion) {
@@ -56,5 +85,9 @@ public class DistribucionUtilidadDetalle {
     public UUID getSocioId() { return (id != null) ? id.getSocioId() : null; }
     public Integer getAcciones() { return acciones; }
     public BigDecimal getMonto() { return monto; }
+    public BigDecimal getMontoCobrado() { return montoCobrado != null ? montoCobrado : monto; }
+    public BigDecimal getMontoReinvertido() { return montoReinvertido != null ? montoReinvertido : BigDecimal.ZERO; }
+    public Integer getAccionesCompradas() { return accionesCompradas != null ? accionesCompradas : 0; }
+    public String getModalidad() { return modalidad != null ? modalidad : "EFECTIVO"; }
     public UUID getOperacionId() { return operacionId; }
 }

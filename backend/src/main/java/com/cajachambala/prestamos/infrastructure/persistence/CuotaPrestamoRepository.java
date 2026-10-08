@@ -26,4 +26,10 @@ public interface CuotaPrestamoRepository extends JpaRepository<CuotaPrestamo, UU
 
     @Query("SELECT c FROM CuotaPrestamo c WHERE c.prestamo.cajaId = :cajaId AND c.estado IN ('PENDIENTE', 'PARCIAL') AND c.fechaVencimiento < :fechaActual")
     List<CuotaPrestamo> findCuotasParaVencer(@Param("cajaId") UUID cajaId, @Param("fechaActual") LocalDate fechaActual);
+
+    @Query("SELECT c FROM CuotaPrestamo c WHERE c.prestamo.cajaId = :cajaId AND c.prestamo.estado = 'VIGENTE' AND c.estado IN ('PENDIENTE', 'PARCIAL', 'VENCIDA') ORDER BY c.fechaVencimiento ASC, c.nroCuota ASC")
+    List<CuotaPrestamo> findPendientesVigentesPorCaja(@Param("cajaId") UUID cajaId);
+
+    @Query("SELECT c FROM CuotaPrestamo c WHERE c.prestamo.cajaId = :cajaId AND c.prestamo.socioId = :socioId AND c.prestamo.estado = 'VIGENTE' AND c.estado IN ('PENDIENTE', 'PARCIAL', 'VENCIDA') ORDER BY c.fechaVencimiento ASC, c.nroCuota ASC")
+    List<CuotaPrestamo> findPendientesVigentesPorSocio(@Param("cajaId") UUID cajaId, @Param("socioId") UUID socioId);
 }

@@ -19,7 +19,7 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatFecha } from "@/lib/utils";
 
 import {
   Card,
@@ -64,6 +64,10 @@ interface DetalleDistribucion {
   acciones: number;
   porcentajeParticipacion: number;
   monto: number;
+  montoCobrado?: number;
+  montoReinvertido?: number;
+  accionesCompradas?: number;
+  modalidad?: string;
   operacionId: string | null;
 }
 
@@ -76,6 +80,9 @@ interface Distribucion {
   totalAcciones: number;
   valorPorAccion: number;
   estado: "BORRADOR" | "APROBADA" | "PAGADA";
+  totalCobrado?: number;
+  totalReinvertido?: number;
+  totalAccionesCompradas?: number;
   detalles: DetalleDistribucion[];
   createdAt: string;
   updatedAt: string;
@@ -246,7 +253,7 @@ export default function DistribucionDetallePage() {
               {getBadgeEstado(dist.estado)}
             </div>
             <p className="text-sm text-muted-foreground">
-              Fecha de Corte: {dist.fechaCorte} • Padrón de {dist.detalles.length} socios participantes
+              Período: {dist.ejercicio === 2024 ? "Julio 2023 - Junio 2024" : dist.ejercicio === 2025 ? "Junio 2024 - Mayo 2025" : "Junio 2025 - Mayo 2026"} • Corte: {formatFecha(dist.fechaCorte)} • Pago: 08/06/{dist.ejercicio} • Padrón de {dist.detalles.length} socios participantes
             </p>
           </div>
         </div>
@@ -282,64 +289,78 @@ export default function DistribucionDetallePage() {
         </div>
       </div>
 
+      {/* Banner Explicativo de la Regla de Distribución de Utilidades */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-900 dark:text-blue-300 flex items-start gap-2.5">
+        <AlertCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+        <div>
+          <span className="font-semibold">Regla Oficial de Distribución de Utilidades:</span> Al cierre de cada ejercicio, las acciones aportadas por los socios <strong>permanecen como capital social activo en la Caja Comunal</strong>. Lo único que se distribuye y liquida anualmente son las <strong>Utilidades generadas</strong>. Cada socio puede cobrar su utilidad en efectivo o reinvertir parte o el total para adquirir nuevas acciones para el siguiente ejercicio.
+        </div>
+      </div>
+
       {/* Tarjetas de Resumen Financiero del Reparto */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Capital Social en Acciones</CardTitle>
+            <Coins className="h-4 w-4 text-amber-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-700">
+              S/. {(Number(dist.totalAcciones) * 30).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {dist.totalAcciones} acciones activas en caja a S/. 30.00 c/u
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-500/20 bg-emerald-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Utilidad Total Aprobada</CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">
+            <div className="text-2xl font-bold text-emerald-700">
               S/. {Number(dist.utilidadTotal).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
             </div>
+            {Math.abs(Number(dist.utilidadTotal) - sumaRepartida) > 0.1 ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                Repartido socios: S/. {sumaRepartida.toFixed(2)} • Remanente caja: S/. {(Number(dist.utilidadTotal) - sumaRepartida).toFixed(2)}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Excedentes netos del ejercicio {dist.ejercicio}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-purple-500/20 bg-purple-500/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cobrado en Efectivo</CardTitle>
+            <TrendingUp className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-700">
+              S/. {Number(dist.totalCobrado ?? (Number(dist.utilidadTotal) - (Number(dist.totalReinvertido) || 0))).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Repartición de excedentes del ejercicio {dist.ejercicio}
+              Utilidades cobradas en efectivo por los socios
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-blue-500/20 bg-blue-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Acciones</CardTitle>
-            <Coins className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium">Reinvertido en Acciones</CardTitle>
+            <RefreshCw className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {dist.totalAcciones}
+            <div className="text-2xl font-bold text-blue-700">
+              S/. {Number(dist.totalReinvertido ?? 0).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Acciones con derecho a dividendos
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dividendo por Acción</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono">
-              S/. {Number(dist.valorPorAccion).toFixed(6)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Cómputo a 6 decimales de precisión
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cuadratura Contable</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              S/. {sumaRepartida.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {sumaRepartida === Number(dist.utilidadTotal) ? "100% Exacto al centavo" : "Ajustado"}
+              +{Number(dist.totalAccionesCompradas ?? 0)} nuevas acciones suscritas con utilidades
             </p>
           </CardContent>
         </Card>
@@ -350,9 +371,9 @@ export default function DistribucionDetallePage() {
         <CardHeader className="px-6 py-4 border-b">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Padrón de Liquidación de Dividendos</CardTitle>
+              <CardTitle className="text-base font-semibold">Padrón de Distribución de Utilidades por Socio</CardTitle>
               <CardDescription>
-                Desglose individual por socio titular con porcentaje de participación y comprobante
+                Desglose individual: Acciones en ejercicio, utilidades aprobadas, cobro en efectivo y reinversión
               </CardDescription>
             </div>
             <span className="text-xs text-muted-foreground">
@@ -365,18 +386,27 @@ export default function DistribucionDetallePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">Código</TableHead>
+                  <TableHead className="w-14">Cód</TableHead>
                   <TableHead>Socio Titular</TableHead>
                   <TableHead className="text-center">N° Acciones</TableHead>
-                  <TableHead className="text-center">% Participación</TableHead>
-                  <TableHead className="text-right">Dividendo a Cobrar</TableHead>
-                  <TableHead className="text-center">Estado de Pago</TableHead>
-                  <TableHead className="text-right">Comprobante de Caja</TableHead>
+                  <TableHead className="text-center">% Part.</TableHead>
+                  <TableHead className="text-right">Capital Acciones</TableHead>
+                  <TableHead className="text-right">Utilidad Ejercicio</TableHead>
+                  <TableHead className="text-center">Modalidad</TableHead>
+                  <TableHead className="text-right">Cobrado Efectivo</TableHead>
+                  <TableHead className="text-right">Reinvertido Acciones</TableHead>
+                  <TableHead className="text-center">Estado</TableHead>
+                  <TableHead className="text-right">Comprobante</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {dist.detalles.map((d) => {
+                  const capital = Number(d.acciones) * 30;
+                  const utilidad = Number(d.monto);
                   const pagado = !!d.operacionId || dist.estado === "PAGADA";
+                  const cobrado = Number(d.montoCobrado ?? (utilidad - (Number(d.montoReinvertido) || 0)));
+                  const reinv = Number(d.montoReinvertido ?? 0);
+                  const accComp = Number(d.accionesCompradas ?? 0);
                   return (
                     <TableRow key={d.socioId}>
                       <TableCell className="font-semibold text-primary">
@@ -387,13 +417,46 @@ export default function DistribucionDetallePage() {
                         <div className="text-xs text-muted-foreground">{d.socioDocumento}</div>
                       </TableCell>
                       <TableCell className="text-center font-medium">
-                        {d.acciones} acciones
+                        {d.acciones} acc.
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline">{d.porcentajeParticipacion}%</Badge>
                       </TableCell>
-                      <TableCell className="text-right font-bold text-emerald-600">
-                        S/. {Number(d.monto).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                      <TableCell className="text-right font-mono text-xs text-amber-700 dark:text-amber-400">
+                        S/. {capital.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-emerald-600">
+                        S/. {utilidad.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {reinv > 0 ? (
+                          cobrado > 0 ? (
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-500/20 text-xs">
+                              Mixto
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20 text-xs">
+                              Reinversión 100%
+                            </Badge>
+                          )
+                        ) : (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-xs">
+                            Efectivo 100%
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        S/. {cobrado.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {reinv > 0 ? (
+                          <div>
+                            <span className="font-semibold text-blue-700">S/. {reinv.toFixed(2)}</span>
+                            <span className="text-xs text-muted-foreground block">+{accComp} acc.</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {pagado ? (
@@ -422,19 +485,33 @@ export default function DistribucionDetallePage() {
         </CardContent>
 
         {/* Resumen Total */}
-        <div className="p-4 bg-muted/20 border-t flex flex-wrap items-center justify-between text-sm">
+        <div className="p-4 bg-muted/20 border-t flex flex-wrap items-center justify-between gap-4 text-sm">
           <div>
-            <span className="text-muted-foreground">Total Acciones Emitidas: </span>
-            <span className="font-bold">{dist.totalAcciones}</span>
+            <span className="text-muted-foreground">Acciones en Ejercicio: </span>
+            <span className="font-bold">{dist.totalAcciones} (S/. {(Number(dist.totalAcciones) * 30).toLocaleString("es-PE", { minimumFractionDigits: 2 })})</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Dividendo Promedio por Socio: </span>
+            <span className="text-muted-foreground">Cobrado en Efectivo: </span>
             <span className="font-bold">
-              S/. {(Number(dist.utilidadTotal) / (dist.detalles.length || 1)).toFixed(2)}
+              S/. {Number(dist.totalCobrado ?? (Number(dist.utilidadTotal) - (Number(dist.totalReinvertido) || 0))).toFixed(2)}
             </span>
           </div>
           <div>
-            <span className="text-muted-foreground">Total Liquidado: </span>
+            <span className="text-muted-foreground">Reinvertido en Acciones: </span>
+            <span className="font-bold text-blue-600">
+              S/. {Number(dist.totalReinvertido ?? 0).toFixed(2)} (+{Number(dist.totalAccionesCompradas ?? 0)} acc)
+            </span>
+          </div>
+          {Math.abs(Number(dist.utilidadTotal) - sumaRepartida) > 0.1 && (
+            <div>
+              <span className="text-muted-foreground">Remanente Comunal: </span>
+              <span className="font-bold text-amber-600">
+                S/. {(Number(dist.utilidadTotal) - sumaRepartida).toFixed(2)}
+              </span>
+            </div>
+          )}
+          <div>
+            <span className="text-muted-foreground">Utilidad Asignada: </span>
             <span className="font-bold text-emerald-600">
               S/. {sumaRepartida.toFixed(2)}
             </span>
@@ -480,7 +557,7 @@ export default function DistribucionDetallePage() {
                     .filter((p) => p.estado === "ABIERTO")
                     .map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.mes}/{p.anio} (Asamblea: {p.fechaReunion}) - Abierto
+                        {p.mes < 10 ? `0${p.mes}` : p.mes}/{p.anio} (Asamblea: {formatFecha(p.fechaReunion)}) - Abierto
                       </SelectItem>
                     ))}
                 </SelectContent>

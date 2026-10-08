@@ -118,6 +118,42 @@ public class CuotaPrestamo {
         }
     }
 
+    public void revertirPago() {
+        this.capitalPagado = BigDecimal.ZERO.setScale(2);
+        this.interesPagado = BigDecimal.ZERO.setScale(2);
+        this.moraPagada = BigDecimal.ZERO.setScale(2);
+        this.fechaPago = null;
+        this.estado = CuotaEstado.PENDIENTE;
+        this.updatedAt = Instant.now();
+    }
+
+    public void fijarPago(BigDecimal capital, BigDecimal interes, BigDecimal mora, LocalDate fecha) {
+        BigDecimal nuevoCapital = capital != null ? capital.setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2);
+        BigDecimal nuevoInteres = interes != null ? interes.setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2);
+        if (nuevoCapital.compareTo(this.capitalProgramado) > 0) {
+            throw new IllegalArgumentException("El capital pagado no puede superar el capital programado de la cuota");
+        }
+        if (nuevoInteres.compareTo(this.interesProgramado) > 0) {
+            throw new IllegalArgumentException("El interés pagado no puede superar el interés programado de la cuota");
+        }
+
+        this.capitalPagado = nuevoCapital;
+        this.interesPagado = nuevoInteres;
+        this.moraPagada = mora != null ? mora.setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2);
+        this.fechaPago = (this.capitalPagado.compareTo(BigDecimal.ZERO) > 0 || this.interesPagado.compareTo(BigDecimal.ZERO) > 0) ? (fecha != null ? fecha : LocalDate.now()) : null;
+        this.updatedAt = Instant.now();
+
+        boolean capOk = this.capitalPagado.compareTo(this.capitalProgramado) >= 0;
+        boolean intOk = this.interesPagado.compareTo(this.interesProgramado) >= 0;
+        if (capOk && intOk) {
+            this.estado = CuotaEstado.PAGADA;
+        } else if (this.capitalPagado.compareTo(BigDecimal.ZERO) > 0 || this.interesPagado.compareTo(BigDecimal.ZERO) > 0) {
+            this.estado = CuotaEstado.PARCIAL;
+        } else {
+            this.estado = CuotaEstado.PENDIENTE;
+        }
+    }
+
     public void actualizarVencimientoSiAplica(LocalDate fechaActual) {
         if ((this.estado == CuotaEstado.PENDIENTE || this.estado == CuotaEstado.PARCIAL) && fechaActual.isAfter(this.fechaVencimiento)) {
             this.estado = CuotaEstado.VENCIDA;
