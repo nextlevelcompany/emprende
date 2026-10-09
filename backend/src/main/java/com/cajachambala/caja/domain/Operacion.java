@@ -73,7 +73,7 @@ public class Operacion {
     private Instant updatedAt;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JoinColumn(name = "operacion_id")
+    @JoinColumn(name = "operacion_id", nullable = false)
     private List<OperacionDetalle> detalles = new ArrayList<>();
 
     protected Operacion() {

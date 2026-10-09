@@ -146,7 +146,12 @@ public class Prestamo {
     }
 
     public void verificarEstadoCancelacion() {
-        boolean todasPagadas = !cuotas.isEmpty() && cuotas.stream().allMatch(c -> c.getEstado() == CuotaEstado.PAGADA);
+        verificarEstadoCancelacion(null);
+    }
+
+    public void verificarEstadoCancelacion(List<CuotaPrestamo> listaCuotas) {
+        List<CuotaPrestamo> lista = (listaCuotas != null && !listaCuotas.isEmpty()) ? listaCuotas : this.cuotas;
+        boolean todasPagadas = !lista.isEmpty() && lista.stream().allMatch(c -> c.getEstado() == CuotaEstado.PAGADA);
         if (todasPagadas) {
             this.estado = PrestamoEstado.CANCELADO;
         } else if (this.estado == PrestamoEstado.CANCELADO) {
@@ -158,6 +163,29 @@ public class Prestamo {
     public void agregarCuota(CuotaPrestamo cuota) {
         this.cuotas.add(cuota);
         cuota.asignarPrestamo(this);
+    }
+
+    public void actualizarCondiciones(
+            BigDecimal montoPrincipal,
+            BigDecimal tasaMensual,
+            Short nroCuotas,
+            LocalDate fechaDesembolso,
+            LocalDate fechaPrimeraCuota,
+            String proposito
+    ) {
+        if (montoPrincipal != null) this.montoPrincipal = montoPrincipal;
+        if (tasaMensual != null) this.tasaMensual = tasaMensual;
+        if (nroCuotas != null) this.nroCuotas = nroCuotas;
+        if (fechaDesembolso != null) this.fechaDesembolso = fechaDesembolso;
+        if (fechaPrimeraCuota != null) this.fechaPrimeraCuota = fechaPrimeraCuota;
+        if (proposito != null) this.proposito = proposito;
+        this.updatedAt = Instant.now();
+    }
+
+    public void anular(String motivo) {
+        this.estado = PrestamoEstado.RECHAZADO;
+        this.proposito = (this.proposito != null ? this.proposito + " | " : "") + "[ANULADO: " + (motivo != null ? motivo.trim() : "") + "]";
+        this.updatedAt = Instant.now();
     }
 
     // Getters y Setters

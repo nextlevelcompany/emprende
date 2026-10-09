@@ -15,7 +15,7 @@ public class OperacionDetalle {
     @Id
     private UUID id;
 
-    @Column(name = "operacion_id", nullable = false)
+    @Column(name = "operacion_id", nullable = false, insertable = false, updatable = false)
     private UUID operacionId;
 
     @Enumerated(EnumType.STRING)
@@ -62,5 +62,18 @@ public class OperacionDetalle {
 
     public void setMonto(BigDecimal monto) {
         this.monto = monto;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OperacionDetalle that = (OperacionDetalle) o;
+        return java.util.Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hashCode(id);
     }
 }

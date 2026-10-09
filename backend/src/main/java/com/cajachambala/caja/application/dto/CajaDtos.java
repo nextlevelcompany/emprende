@@ -242,8 +242,25 @@ public class CajaDtos {
             Boolean accionesPagado,
             Boolean cuotaPagada,
             UUID cuotaId,
-            UUID prestamoId
-    ) {}
+            UUID prestamoId,
+            List<UUID> cuotasSeleccionadasIds
+    ) {
+        public GuardarFilaPlanillaRequest(
+                UUID socioId,
+                BigDecimal ahorro,
+                BigDecimal pagoCapital,
+                BigDecimal interesRecibido,
+                BigDecimal acciones,
+                BigDecimal tardanzaMulta,
+                BigDecimal reservas,
+                Boolean accionesPagado,
+                Boolean cuotaPagada,
+                UUID cuotaId,
+                UUID prestamoId
+        ) {
+            this(socioId, ahorro, pagoCapital, interesRecibido, acciones, tardanzaMulta, reservas, accionesPagado, cuotaPagada, cuotaId, prestamoId, null);
+        }
+    }
 
     public record GuardarPlanillaRequest(
             List<GuardarFilaPlanillaRequest> filas

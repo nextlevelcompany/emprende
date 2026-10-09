@@ -27,6 +27,8 @@ import {
   X,
   Info,
   ChevronDown,
+  Pencil,
+  CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatFecha } from "@/lib/utils";
@@ -68,7 +70,62 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-export interface DetalleCuotaPlanilla {
+interface CuotaSimuladaLocal {
+  nroCuota: number;
+  fechaVencimiento: string;
+  capital: number;
+  interes: number;
+  totalCuota: number;
+  saldoRestante: number;
+}
+
+function calcularCronogramaLocal(
+  principal: number,
+  tasaMensualPct: number,
+  nroCuotas: number,
+  fecha1raCuota: string
+): CuotaSimuladaLocal[] {
+  if (principal <= 0 || nroCuotas <= 0 || !fecha1raCuota) return [];
+
+  const tasaDecimal = tasaMensualPct / 100;
+  const baseCap = Math.floor((principal / nroCuotas) * 100) / 100;
+  const sumaCapAsignado = baseCap * (nroCuotas - 1);
+  const capUltima = Math.round((principal - sumaCapAsignado) * 100) / 100;
+
+  const resultado: CuotaSimuladaLocal[] = [];
+  let saldo = principal;
+
+  const partes = fecha1raCuota.split("-");
+  if (partes.length < 3) return [];
+  const y = parseInt(partes[0]);
+  const m = parseInt(partes[1]);
+  const d = parseInt(partes[2]);
+
+  for (let i = 1; i <= nroCuotas; i++) {
+    const capCuota = i === nroCuotas ? capUltima : baseCap;
+    const intCuota = Math.round(saldo * tasaDecimal * 100) / 100;
+    const total = Math.round((capCuota + intCuota) * 100) / 100;
+    const nuevoSaldo = Math.max(0, Math.round((saldo - capCuota) * 100) / 100);
+
+    const dt = new Date(y, m - 1 + (i - 1), d);
+    const fechaVenc = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+
+    resultado.push({
+      nroCuota: i,
+      fechaVencimiento: fechaVenc,
+      capital: capCuota,
+      interes: intCuota,
+      totalCuota: total,
+      saldoRestante: nuevoSaldo,
+    });
+
+    saldo = nuevoSaldo;
+  }
+
+  return resultado;
+}
+
+interface DetalleCuotaPlanilla {
   prestamoId: string;
   prestamoNumero: number;
   cuotaId: string;
@@ -206,6 +263,44 @@ export default function PlanillaMensualPage() {
   const [prestamoProposito, setPrestamoProposito] = React.useState("Préstamo otorgado en asamblea");
   const [prestamoOpEgresoId, setPrestamoOpEgresoId] = React.useState<string | null>(null);
 
+  // Estados para Edición de Préstamo en Asamblea
+  const [modalEditarPrestamo, setModalEditarPrestamo] = React.useState(false);
+  const [editPrestamoId, setEditPrestamoId] = React.useState<string | null>(null);
+  const [editPrestamoNumero, setEditPrestamoNumero] = React.useState<number | null>(null);
+  const [editPrestamoSocioNombre, setEditPrestamoSocioNombre] = React.useState<string>("");
+  const [editPrestamoMonto, setEditPrestamoMonto] = React.useState<string>("");
+  const [editPrestamoCuotas, setEditPrestamoCuotas] = React.useState<string>("6");
+  const [editPrestamoTasa, setEditPrestamoTasa] = React.useState<string>("2.0");
+  const [editPrestamoFecha1raCuota, setEditPrestamoFecha1raCuota] = React.useState<string>("");
+  const [editPrestamoProposito, setEditPrestamoProposito] = React.useState<string>("");
+  const [editPrestamoObservacion, setEditPrestamoObservacion] = React.useState<string>("");
+
+  // Estados para Eliminación de Préstamo en Asamblea
+  const [modalEliminarPrestamo, setModalEliminarPrestamo] = React.useState(false);
+  const [eliminarPrestamoId, setEliminarPrestamoId] = React.useState<string | null>(null);
+  const [eliminarPrestamoNumero, setEliminarPrestamoNumero] = React.useState<number | null>(null);
+  const [eliminarPrestamoSocio, setEliminarPrestamoSocio] = React.useState<string>("");
+  const [eliminarPrestamoMonto, setEliminarPrestamoMonto] = React.useState<number>(0);
+  const [motivoEliminacionPrestamo, setMotivoEliminacionPrestamo] = React.useState<string>("");
+
+  // Estados para Modificación / Reprogramación de Cuotas
+  const [modalModificarCuotas, setModalModificarCuotas] = React.useState(false);
+  const [modCuotasPrestamoId, setModCuotasPrestamoId] = React.useState<string | null>(null);
+  const [modCuotasNumero, setModCuotasNumero] = React.useState<number | null>(null);
+  const [modCuotasSocio, setModCuotasSocio] = React.useState<string>("");
+  const [modCuotasPrincipal, setModCuotasPrincipal] = React.useState<number>(0);
+  const [modCuotasLista, setModCuotasLista] = React.useState<{
+    id: string;
+    nroCuota: number;
+    fechaVencimiento: string;
+    capitalProgramado: number;
+    interesProgramado: number;
+    capitalPagado: number;
+    interesPagado: number;
+    estado: string;
+  }[]>([]);
+  const [modCuotasObservacion, setModCuotasObservacion] = React.useState<string>("");
+
   // Form states
   const [tipoFlujo, setTipoFlujo] = React.useState<"INGRESO" | "EGRESO">("INGRESO");
   const [socioSeleccionado, setSocioSeleccionado] = React.useState<string>("");
@@ -297,6 +392,20 @@ export default function PlanillaMensualPage() {
       }
     );
   }, [filasEditables, data?.filas]);
+
+  const cronogramaSimuladoNuevo = React.useMemo(() => {
+    const p = parseFloat(prestamoMonto) || 0;
+    const t = parseFloat(prestamoTasa) || 0;
+    const n = parseInt(prestamoCuotas) || 0;
+    return calcularCronogramaLocal(p, t, n, prestamoFecha1raCuota);
+  }, [prestamoMonto, prestamoTasa, prestamoCuotas, prestamoFecha1raCuota]);
+
+  const cronogramaSimuladoEdit = React.useMemo(() => {
+    const p = parseFloat(editPrestamoMonto) || 0;
+    const t = parseFloat(editPrestamoTasa) || 0;
+    const n = parseInt(editPrestamoCuotas) || 0;
+    return calcularCronogramaLocal(p, t, n, editPrestamoFecha1raCuota);
+  }, [editPrestamoMonto, editPrestamoTasa, editPrestamoCuotas, editPrestamoFecha1raCuota]);
 
   const cargarPlanilla = React.useCallback(async () => {
     if (!periodoId) return;
@@ -451,6 +560,10 @@ export default function PlanillaMensualPage() {
       })),
     ];
 
+    const nuevasDisponibles = futurasUnicas.filter(
+      (c) => !cuotasAdelantoSeleccionadas.includes(c.cuotaId)
+    );
+
     setFilasEditables((prev) => {
       const copy = [...prev];
       const target = { ...copy[socioDetalleFilaIdx] };
@@ -458,6 +571,7 @@ export default function PlanillaMensualPage() {
       target.interesRecibido = nuevoInt;
       target.cuotaPagada = true;
       target.detallesPrestamos = nuevosDetalles;
+      target.cuotasDisponiblesAdelanto = nuevasDisponibles;
 
       const acc = target.accionesPagado ? (Number(target.acciones) || 0) : 0;
       target.totalIngreso = acc + nuevoCap + nuevoInt + (Number(target.ahorro) || 0) + (Number(target.tardanzaMulta) || 0) + (Number(target.reservas) || 0);
@@ -533,6 +647,11 @@ export default function PlanillaMensualPage() {
             cuotaPagada: Boolean(f.cuotaPagada),
             cuotaId: f.cuotaId || null,
             prestamoId: f.prestamoId || null,
+            cuotasSeleccionadasIds: f.cuotaPagada
+              ? (f.detallesPrestamos && f.detallesPrestamos.length > 0
+                  ? f.detallesPrestamos.map((d: any) => d.cuotaId)
+                  : (f.cuotaId ? [f.cuotaId] : []))
+              : [],
           })),
       };
 
@@ -843,6 +962,208 @@ export default function PlanillaMensualPage() {
       cargarPlanilla();
     } catch (err: any) {
       toast.error(err.message || "Error al otorgar préstamo");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  // Handlers para Edición, Eliminación y Reprogramación de Préstamos en Asamblea
+  const abrirModalEditarPrestamo = async (prestamoId: string) => {
+    try {
+      setProcesando(true);
+      const res = await fetch(`/api/prestamos/${prestamoId}`);
+      if (!res.ok) throw new Error("No se pudo cargar la información del préstamo");
+      const pData = await res.json();
+      const p = pData.prestamo || pData;
+      setEditPrestamoId(p.id);
+      setEditPrestamoNumero(p.numero);
+      setEditPrestamoSocioNombre(p.socioNombreCompleto || "Socio");
+      setEditPrestamoMonto(String(p.montoPrincipal || ""));
+      setEditPrestamoCuotas(String(p.nroCuotas || "6"));
+      setEditPrestamoTasa(String(((p.tasaMensual || 0) * 100).toFixed(2)));
+      setEditPrestamoFecha1raCuota(p.fechaPrimeraCuota || "");
+      setEditPrestamoProposito(p.proposito || "");
+      setEditPrestamoObservacion("");
+      setModalEditarPrestamo(true);
+    } catch (err: any) {
+      toast.error(err.message || "Error al abrir edición de préstamo");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const handleEditarPrestamoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPrestamoId || !periodoId) return;
+    const monto = parseFloat(editPrestamoMonto);
+    if (!monto || monto <= 0) {
+      toast.error("El monto debe ser mayor a cero");
+      return;
+    }
+    const cuotas = parseInt(editPrestamoCuotas);
+    if (!cuotas || cuotas <= 0) {
+      toast.error("El número de cuotas debe ser al menos 1");
+      return;
+    }
+    const tasa = parseFloat(editPrestamoTasa);
+    if (isNaN(tasa) || tasa < 0) {
+      toast.error("La tasa mensual debe ser válida");
+      return;
+    }
+    if (!editPrestamoObservacion || editPrestamoObservacion.trim().length < 5) {
+      toast.error("Debe ingresar una observación justificando la edición (mínimo 5 caracteres)");
+      return;
+    }
+
+    try {
+      setProcesando(true);
+      const res = await fetch(`/api/prestamos/${editPrestamoId}/asamblea`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          periodoId,
+          montoPrincipal: monto,
+          tasaMensual: tasa / 100,
+          nroCuotas: cuotas,
+          fechaDesembolso: data?.periodo.fechaReunion,
+          fechaPrimeraCuota: editPrestamoFecha1raCuota,
+          proposito: editPrestamoProposito || "Préstamo en asamblea",
+          observacion: editPrestamoObservacion.trim(),
+        }),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.detail || resData.error || resData.message || "Error al editar préstamo");
+      }
+      toast.success("Préstamo modificado correctamente y cronograma recalculado.");
+      setModalEditarPrestamo(false);
+      cargarPlanilla();
+    } catch (err: any) {
+      toast.error(err.message || "Error al editar préstamo");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const abrirModalEliminarPrestamo = (prestamoId: string, numero: number, socioNombre: string, monto: number) => {
+    setEliminarPrestamoId(prestamoId);
+    setEliminarPrestamoNumero(numero);
+    setEliminarPrestamoSocio(socioNombre);
+    setEliminarPrestamoMonto(monto);
+    setMotivoEliminacionPrestamo("");
+    setModalEliminarPrestamo(true);
+  };
+
+  const handleEliminarPrestamoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eliminarPrestamoId || !periodoId) return;
+    if (!motivoEliminacionPrestamo || motivoEliminacionPrestamo.trim().length < 5) {
+      toast.error("El comentario con el motivo de eliminación debe tener al menos 5 caracteres");
+      return;
+    }
+
+    try {
+      setProcesando(true);
+      const res = await fetch(`/api/prestamos/${eliminarPrestamoId}/asamblea`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          periodoId,
+          motivo: motivoEliminacionPrestamo.trim(),
+        }),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.detail || resData.error || resData.message || "Error al eliminar préstamo");
+      }
+      toast.success("Préstamo eliminado exitosamente. El egreso contable fue anulado y el saldo regresó a caja.");
+      setModalEliminarPrestamo(false);
+      cargarPlanilla();
+    } catch (err: any) {
+      toast.error(err.message || "Error al eliminar préstamo");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const abrirModalModificarCuotas = async (prestamoId: string) => {
+    try {
+      setProcesando(true);
+      const res = await fetch(`/api/prestamos/${prestamoId}`);
+      if (!res.ok) throw new Error("No se pudo cargar la información del préstamo");
+      const pData = await res.json();
+      const p = pData.prestamo || pData;
+      const cronograma = pData.cronograma || [];
+      setModCuotasPrestamoId(p.id);
+      setModCuotasNumero(p.numero);
+      setModCuotasSocio(p.socioNombreCompleto || "Socio");
+      setModCuotasPrincipal(Number(p.montoPrincipal) || 0);
+      setModCuotasLista(
+        cronograma.map((c: any) => ({
+          id: c.id,
+          nroCuota: c.nroCuota,
+          fechaVencimiento: c.fechaVencimiento,
+          capitalProgramado: Number(c.capitalProgramado) || 0,
+          interesProgramado: Number(c.interesProgramado) || 0,
+          capitalPagado: Number(c.capitalPagado) || 0,
+          interesPagado: Number(c.interesPagado) || 0,
+          estado: c.estado,
+        }))
+      );
+      setModCuotasObservacion("");
+      setModalModificarCuotas(true);
+    } catch (err: any) {
+      toast.error(err.message || "Error al abrir reprogramación de cuotas");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const handleModificarCuotasSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modCuotasPrestamoId) return;
+    if (!modCuotasObservacion || modCuotasObservacion.trim().length < 5) {
+      toast.error("Debe ingresar una observación justificando la reprogramación de cuotas (mínimo 5 caracteres)");
+      return;
+    }
+
+    const sumaCapital = modCuotasLista.reduce((acc, c) => acc + (Number(c.capitalProgramado) || 0), 0);
+    const diff = Math.abs(sumaCapital - modCuotasPrincipal);
+    if (diff > 0.05) {
+      toast.error(
+        `La suma de los capitales programados (S/. ${sumaCapital.toFixed(2)}) debe coincidir con el monto principal del préstamo (S/. ${modCuotasPrincipal.toFixed(2)}). Diferencia: S/. ${diff.toFixed(2)}`
+      );
+      return;
+    }
+
+    try {
+      setProcesando(true);
+      const payload = {
+        cuotas: modCuotasLista
+          .filter((c) => c.estado !== "PAGADA")
+          .map((c) => ({
+            cuotaId: c.id,
+            capitalProgramado: Number(c.capitalProgramado),
+            interesProgramado: Number(c.interesProgramado),
+            fechaVencimiento: c.fechaVencimiento,
+          })),
+        observacion: modCuotasObservacion.trim(),
+      };
+
+      const res = await fetch(`/api/prestamos/${modCuotasPrestamoId}/cuotas`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.detail || resData.error || resData.message || "Error al reprogramar cuotas");
+      }
+      toast.success("Cuotas reprogramadas exitosamente con justificación registrada.");
+      setModalModificarCuotas(false);
+      cargarPlanilla();
+    } catch (err: any) {
+      toast.error(err.message || "Error al reprogramar cuotas");
     } finally {
       setProcesando(false);
     }
@@ -1593,16 +1914,53 @@ export default function PlanillaMensualPage() {
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           {f.prestamo > 0 ? (
-                            <div className="flex items-center justify-end gap-1.5">
+                            <div className="flex items-center justify-end gap-1">
                               {f.prestamoId ? (
-                                <Link
-                                  href={`/admin/prestamos/${f.prestamoId}`}
-                                  className="inline-flex items-center gap-1 font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline"
-                                  title="Ver detalle del préstamo, cronograma de cuotas e intereses"
-                                >
-                                  <Coins className="h-3.5 w-3.5" />
-                                  <span>{f.prestamo.toFixed(2)}</span>
-                                </Link>
+                                <>
+                                  <Link
+                                    href={`/admin/prestamos/${f.prestamoId}`}
+                                    className="inline-flex items-center gap-1 font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline mr-1"
+                                    title="Ver detalle completo del préstamo, cronograma e intereses"
+                                  >
+                                    <Coins className="h-3.5 w-3.5" />
+                                    <span>{f.prestamo.toFixed(2)}</span>
+                                  </Link>
+                                  {!esCerrado && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => abrirModalEditarPrestamo(f.prestamoId!)}
+                                        className="p-1 rounded hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                                        title="Editar condiciones del préstamo antes del cierre"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          abrirModalEliminarPrestamo(
+                                            f.prestamoId!,
+                                            f.prestamoNumero || 0,
+                                            f.socioNombre,
+                                            f.prestamo
+                                          )
+                                        }
+                                        className="p-1 rounded hover:bg-destructive/10 text-destructive transition-colors cursor-pointer"
+                                        title="Eliminar préstamo antes del cierre (requiere comentario)"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => abrirModalModificarCuotas(f.prestamoId!)}
+                                    className="p-1 rounded hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-colors cursor-pointer"
+                                    title="Modificar o reprogramar cuotas del préstamo (requiere observación)"
+                                  >
+                                    <CalendarClock className="h-3.5 w-3.5" />
+                                  </button>
+                                </>
                               ) : !esCerrado ? (
                                 <button
                                   type="button"
@@ -1985,141 +2343,668 @@ export default function PlanillaMensualPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: Otorgar Préstamo en Asamblea */}
+      {/* DIALOG: Otorgar Préstamo en Asamblea (Ampliación y Vista Completa) */}
       <Dialog open={modalPrestamo} onOpenChange={setModalPrestamo}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+            <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-lg">
               <Coins className="h-5 w-5" />
               Otorgar Préstamo en Asamblea
             </DialogTitle>
             <DialogDescription>
-              Colocación de fondos de la asamblea comunal. Genera automáticamente el egreso contable en la planilla y el cronograma de cuotas oficial en el módulo de Préstamos.
+              Colocación de fondos de la asamblea comunal. Genera automáticamente el egreso contable en la planilla y el cronograma de amortización oficial con intereses sobre saldo.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleOtorgarPrestamoSubmit} className="space-y-4">
             {/* Saldo disponible banner */}
             <div className="p-3 bg-muted/50 rounded-lg flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Saldo disponible en caja para prestar:</span>
+              <span className="text-muted-foreground font-medium">Saldo disponible en caja para prestar:</span>
               <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
                 S/. {Number(data.saldoFinal).toFixed(2)}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-xs">Socio Beneficiario *</Label>
-                <Select value={prestamoSocioId} onValueChange={setPrestamoSocioId} required>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Seleccione el socio titular..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {socios.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        #{String(s.codigo).padStart(3, "0")} - {s.nombreCompleto}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Monto a Prestar (S/.) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="1"
-                  required
-                  placeholder="0.00"
-                  value={prestamoMonto}
-                  onChange={(e) => setPrestamoMonto(e.target.value)}
-                  className="h-9 font-mono font-semibold"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Plazo (N° de Cuotas Mensuales) *</Label>
-                <Select value={prestamoCuotas} onValueChange={setPrestamoCuotas}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        {n} {n === 1 ? "mes (1 cuota)" : `meses (${n} cuotas)`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Tasa de Interés Mensual (%) *</Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    required
-                    value={prestamoTasa}
-                    onChange={(e) => setPrestamoTasa(e.target.value)}
-                    className="h-9 font-mono pr-8"
-                  />
-                  <span className="absolute right-2.5 top-2.5 text-xs text-muted-foreground">%</span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Formulario (5 columnas) */}
+              <div className="lg:col-span-5 space-y-3.5">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Socio Beneficiario *</Label>
+                  <Select value={prestamoSocioId} onValueChange={setPrestamoSocioId} required>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Seleccione el socio titular..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {socios.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          #{String(s.codigo).padStart(3, "0")} - {s.nombreCompleto}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <p className="text-[11px] text-muted-foreground">Interés mensual sobre saldo deudor</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Monto a Prestar (S/.) *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      required
+                      placeholder="0.00"
+                      value={prestamoMonto}
+                      onChange={(e) => setPrestamoMonto(e.target.value)}
+                      className="h-9 font-mono font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Plazo (Meses / Cuotas) *</Label>
+                    <Select value={prestamoCuotas} onValueChange={setPrestamoCuotas}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n} {n === 1 ? "mes (1 cuota)" : `meses (${n} cuotas)`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Tasa Interés Mensual (%) *</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        required
+                        value={prestamoTasa}
+                        onChange={(e) => setPrestamoTasa(e.target.value)}
+                        className="h-9 font-mono pr-8"
+                      />
+                      <span className="absolute right-2.5 top-2.5 text-xs text-muted-foreground">%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Fecha 1ra Cuota *</Label>
+                    <Input
+                      type="date"
+                      required
+                      value={prestamoFecha1raCuota}
+                      onChange={(e) => setPrestamoFecha1raCuota(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Destino / Propósito del Crédito</Label>
+                  <Input
+                    placeholder="Ej. Capital de trabajo, comercio, siembra..."
+                    value={prestamoProposito}
+                    onChange={(e) => setPrestamoProposito(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                {/* Resumen Financiero */}
+                {cronogramaSimuladoNuevo.length > 0 && (
+                  <div className="p-3 rounded-lg border bg-muted/40 space-y-1.5 text-xs">
+                    <p className="font-semibold text-foreground">Totales Proyectados:</p>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Capital Colocado:</span>
+                      <span className="font-mono font-bold">
+                        S/. {(parseFloat(prestamoMonto) || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Intereses Proyectados:</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        S/. {cronogramaSimuladoNuevo.reduce((acc, c) => acc + c.interes, 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t">
+                      <span className="font-semibold text-foreground">Total a Devolver:</span>
+                      <span className="font-mono font-bold text-foreground">
+                        S/. {cronogramaSimuladoNuevo.reduce((acc, c) => acc + c.totalCuota, 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs">Fecha 1ra Cuota (Vencimiento) *</Label>
-                <Input
-                  type="date"
-                  required
-                  value={prestamoFecha1raCuota}
-                  onChange={(e) => setPrestamoFecha1raCuota(e.target.value)}
-                  className="h-9"
-                />
-              </div>
+              {/* Cronograma en Vivo (7 columnas) */}
+              <div className="lg:col-span-7 flex flex-col">
+                <div className="flex items-center justify-between pb-2 border-b">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-semibold text-foreground">Cronograma de Pagos Oficial</p>
+                    <p className="text-[11px] text-muted-foreground">Método: Capital Fijo con Interés Decreciente sobre Saldo</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    {cronogramaSimuladoNuevo.length} cuotas
+                  </Badge>
+                </div>
 
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-xs">Destino / Propósito del Crédito</Label>
-                <Input
-                  placeholder="Ej. Capital de trabajo, comercio, siembra..."
-                  value={prestamoProposito}
-                  onChange={(e) => setPrestamoProposito(e.target.value)}
-                  className="h-9"
-                />
+                {cronogramaSimuladoNuevo.length > 0 ? (
+                  <div className="mt-2 border rounded-lg overflow-hidden flex-1 flex flex-col">
+                    <div className="max-h-72 overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/40 text-[11px]">
+                            <TableHead className="w-12 text-center h-8 px-2 font-bold">N°</TableHead>
+                            <TableHead className="h-8 px-2 font-bold">Vencimiento</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold">Capital</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold">Interés</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold text-emerald-600 dark:text-emerald-400">Cuota</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold text-muted-foreground">Saldo</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {cronogramaSimuladoNuevo.map((c) => (
+                            <TableRow key={c.nroCuota} className="text-xs hover:bg-muted/30">
+                              <TableCell className="text-center font-mono py-1.5 px-2 font-bold">{c.nroCuota}</TableCell>
+                              <TableCell className="py-1.5 px-2 font-mono text-[11px]">{formatFecha(c.fechaVencimiento)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2">S/. {c.capital.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 text-emerald-600 dark:text-emerald-400">
+                                S/. {c.interes.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 font-bold">S/. {c.totalCuota.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 text-muted-foreground">
+                                S/. {c.saldoRestante.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="bg-muted/50 p-2.5 border-t mt-auto flex items-center justify-between text-xs font-mono font-bold">
+                      <span>Total Cronograma:</span>
+                      <div className="flex gap-4">
+                        <span>Cap: S/. {cronogramaSimuladoNuevo.reduce((acc, c) => acc + c.capital, 0).toFixed(2)}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          Int: S/. {cronogramaSimuladoNuevo.reduce((acc, c) => acc + c.interes, 0).toFixed(2)}
+                        </span>
+                        <span>Total: S/. {cronogramaSimuladoNuevo.reduce((acc, c) => acc + c.totalCuota, 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center border rounded-lg border-dashed p-6 text-center text-muted-foreground text-xs mt-2">
+                    <Coins className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                    <p className="font-medium">Ingrese el monto y plazo para visualizar el cronograma detallado</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Simulación resumida de cuotas */}
-            {parseFloat(prestamoMonto) > 0 && parseInt(prestamoCuotas) > 0 && (
-              <div className="p-3 rounded-lg border bg-muted/40 space-y-1 text-xs">
-                <p className="font-semibold text-foreground">Proyección de Pagos Mensuales:</p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <span className="text-muted-foreground">Capital por Cuota: </span>
-                    <span className="font-mono font-bold">
-                      S/. {(parseFloat(prestamoMonto) / parseInt(prestamoCuotas)).toFixed(2)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Interés Cuota 1: </span>
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      S/. {(parseFloat(prestamoMonto) * (parseFloat(prestamoTasa) / 100)).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
+            <DialogFooter className="pt-2 border-t">
               <Button type="button" variant="outline" onClick={() => setModalPrestamo(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={procesando} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 {procesando ? "Otorgando..." : "Confirmar y Desembolsar Préstamo"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: Editar Préstamo en Asamblea (Permitido antes de cerrar el periodo) */}
+      <Dialog open={modalEditarPrestamo} onOpenChange={setModalEditarPrestamo}>
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-lg">
+              <Pencil className="h-5 w-5" />
+              Editar Préstamo en Asamblea #{editPrestamoNumero} - {editPrestamoSocioNombre}
+            </DialogTitle>
+            <DialogDescription>
+              Modificación de las condiciones del crédito antes del cierre del periodo. Recalcula el cronograma de cuotas y actualiza automáticamente el monto del egreso en el libro de caja.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEditarPrestamoSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Formulario (5 columnas) */}
+              <div className="lg:col-span-5 space-y-3.5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Monto Principal (S/.) *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      required
+                      placeholder="0.00"
+                      value={editPrestamoMonto}
+                      onChange={(e) => setEditPrestamoMonto(e.target.value)}
+                      className="h-9 font-mono font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Plazo (Cuotas) *</Label>
+                    <Select value={editPrestamoCuotas} onValueChange={setEditPrestamoCuotas}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n} {n === 1 ? "mes (1 cuota)" : `meses (${n} cuotas)`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Tasa Mensual (%) *</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        required
+                        value={editPrestamoTasa}
+                        onChange={(e) => setEditPrestamoTasa(e.target.value)}
+                        className="h-9 font-mono pr-8"
+                      />
+                      <span className="absolute right-2.5 top-2.5 text-xs text-muted-foreground">%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Fecha 1ra Cuota *</Label>
+                    <Input
+                      type="date"
+                      required
+                      value={editPrestamoFecha1raCuota}
+                      onChange={(e) => setEditPrestamoFecha1raCuota(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Destino / Propósito</Label>
+                  <Input
+                    placeholder="Ej. Modificación de propósito..."
+                    value={editPrestamoProposito}
+                    onChange={(e) => setEditPrestamoProposito(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-foreground">
+                    Observación / Justificación Obligatoria *
+                  </Label>
+                  <Textarea
+                    rows={2}
+                    required
+                    placeholder="Indique el motivo de la corrección o acuerdo en asamblea (mínimo 5 caracteres)..."
+                    value={editPrestamoObservacion}
+                    onChange={(e) => setEditPrestamoObservacion(e.target.value)}
+                    className="text-xs"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Obligatorio para el registro inmutable de auditoría contable.
+                  </p>
+                </div>
+
+                {cronogramaSimuladoEdit.length > 0 && (
+                  <div className="p-3 rounded-lg border bg-muted/40 space-y-1.5 text-xs">
+                    <p className="font-semibold text-foreground">Totales Recalculados:</p>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Capital:</span>
+                      <span className="font-mono font-bold">
+                        S/. {(parseFloat(editPrestamoMonto) || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Intereses:</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        S/. {cronogramaSimuladoEdit.reduce((acc, c) => acc + c.interes, 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t">
+                      <span className="font-semibold text-foreground">Total a Pagar:</span>
+                      <span className="font-mono font-bold">
+                        S/. {cronogramaSimuladoEdit.reduce((acc, c) => acc + c.totalCuota, 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Cronograma Recalculado (7 columnas) */}
+              <div className="lg:col-span-7 flex flex-col">
+                <div className="flex items-center justify-between pb-2 border-b">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-semibold text-foreground">Nuevo Cronograma Proyectado</p>
+                    <p className="text-[11px] text-muted-foreground">Sustituye las cuotas anteriores tras confirmación</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    {cronogramaSimuladoEdit.length} cuotas
+                  </Badge>
+                </div>
+
+                {cronogramaSimuladoEdit.length > 0 ? (
+                  <div className="mt-2 border rounded-lg overflow-hidden flex-1 flex flex-col">
+                    <div className="max-h-72 overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/40 text-[11px]">
+                            <TableHead className="w-12 text-center h-8 px-2 font-bold">N°</TableHead>
+                            <TableHead className="h-8 px-2 font-bold">Vencimiento</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold">Capital</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold">Interés</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold text-emerald-600 dark:text-emerald-400">Cuota</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold text-muted-foreground">Saldo</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {cronogramaSimuladoEdit.map((c) => (
+                            <TableRow key={c.nroCuota} className="text-xs hover:bg-muted/30">
+                              <TableCell className="text-center font-mono py-1.5 px-2 font-bold">{c.nroCuota}</TableCell>
+                              <TableCell className="py-1.5 px-2 font-mono text-[11px]">{formatFecha(c.fechaVencimiento)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2">S/. {c.capital.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 text-emerald-600 dark:text-emerald-400">
+                                S/. {c.interes.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 font-bold">S/. {c.totalCuota.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 text-muted-foreground">
+                                S/. {c.saldoRestante.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="bg-muted/50 p-2.5 border-t mt-auto flex items-center justify-between text-xs font-mono font-bold">
+                      <span>Total:</span>
+                      <div className="flex gap-4">
+                        <span>Cap: S/. {cronogramaSimuladoEdit.reduce((acc, c) => acc + c.capital, 0).toFixed(2)}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          Int: S/. {cronogramaSimuladoEdit.reduce((acc, c) => acc + c.interes, 0).toFixed(2)}
+                        </span>
+                        <span>Total: S/. {cronogramaSimuladoEdit.reduce((acc, c) => acc + c.totalCuota, 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center border rounded-lg border-dashed p-6 text-center text-muted-foreground text-xs mt-2">
+                    <p>Complete los datos para generar el nuevo cronograma</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2 border-t">
+              <Button type="button" variant="outline" onClick={() => setModalEditarPrestamo(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={procesando || editPrestamoObservacion.trim().length < 5}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {procesando ? "Guardando..." : "Guardar Modificaciones"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: Eliminar Préstamo en Asamblea (Permitido solo antes de cerrar el periodo) */}
+      <Dialog open={modalEliminarPrestamo} onOpenChange={setModalEliminarPrestamo}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive text-lg">
+              <Trash2 className="h-5 w-5" />
+              Eliminar Préstamo en Asamblea
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción solo está permitida antes del cierre del periodo contable. Revertirá la colocación y reintegrará el efectivo al saldo de caja.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEliminarPrestamoSubmit} className="space-y-4">
+            <div className="p-3.5 rounded-lg border border-rose-300 dark:border-rose-900 bg-rose-500/10 text-xs space-y-2">
+              <div className="flex items-center gap-2 font-bold text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>Préstamo #{eliminarPrestamoNumero} - {eliminarPrestamoSocio}</span>
+              </div>
+              <p className="text-muted-foreground">
+                Monto colocado: <strong className="font-mono text-foreground">S/. {eliminarPrestamoMonto.toFixed(2)}</strong>.
+              </p>
+              <p className="text-muted-foreground">
+                Al confirmar, se anulará la operación de egreso en el libro de caja, se cancelarán las cuotas programadas y el dinero volverá a estar disponible para colocación en este periodo.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-foreground">
+                Comentario / Motivo de Eliminación Obligatorio *
+              </Label>
+              <Textarea
+                rows={3}
+                required
+                placeholder="Explique el motivo del error en la solicitud o asamblea (ej: 'Error en monto solicitado, corregido en acta comunal'). Mínimo 5 caracteres..."
+                value={motivoEliminacionPrestamo}
+                onChange={(e) => setMotivoEliminacionPrestamo(e.target.value)}
+                className="text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Este comentario quedará registrado de forma permanente en la auditoría contable.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setModalEliminarPrestamo(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={procesando || motivoEliminacionPrestamo.trim().length < 5}
+              >
+                {procesando ? "Eliminando..." : "Confirmar Eliminación del Préstamo"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: Modificar Cuotas / Reprogramación (Permitido incluso si el periodo está cerrado) */}
+      <Dialog open={modalModificarCuotas} onOpenChange={setModalModificarCuotas}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-lg">
+              <CalendarClock className="h-5 w-5" />
+              Reprogramar Cuotas de Préstamo #{modCuotasNumero} - {modCuotasSocio}
+            </DialogTitle>
+            <DialogDescription>
+              Ajuste de fechas de vencimiento y montos de cuotas pendientes. Permitido incluso con periodos cerrados para reflejar acuerdos comunales de reprogramación.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleModificarCuotasSubmit} className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 text-xs">
+              <div>
+                <span className="text-muted-foreground">Monto Principal del Crédito: </span>
+                <span className="font-mono font-bold text-sm">S/. {modCuotasPrincipal.toFixed(2)}</span>
+              </div>
+              <div>
+                {(() => {
+                  const sumaCap = modCuotasLista.reduce((acc, c) => acc + (Number(c.capitalProgramado) || 0), 0);
+                  const diff = Math.abs(sumaCap - modCuotasPrincipal);
+                  if (diff <= 0.05) {
+                    return (
+                      <Badge className="bg-emerald-600 text-white text-[11px]">
+                        <Check className="h-3 w-3 mr-1" /> Cuadre Financiero Exacto (S/. {sumaCap.toFixed(2)})
+                      </Badge>
+                    );
+                  }
+                  return (
+                    <Badge variant="destructive" className="text-[11px]">
+                      <AlertTriangle className="h-3 w-3 mr-1" /> Diferencia de Capital: S/. {diff.toFixed(2)} (Suma: S/. {sumaCap.toFixed(2)})
+                    </Badge>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Tabla interactiva de cuotas */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-72 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 text-[11px]">
+                      <TableHead className="w-12 text-center h-8 font-bold">N°</TableHead>
+                      <TableHead className="h-8 font-bold">Estado</TableHead>
+                      <TableHead className="h-8 font-bold">Vencimiento</TableHead>
+                      <TableHead className="text-right h-8 font-bold">Capital Programado (S/.)</TableHead>
+                      <TableHead className="text-right h-8 font-bold">Interés Programado (S/.)</TableHead>
+                      <TableHead className="text-right h-8 font-bold">Cuota Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {modCuotasLista.map((c, cIdx) => {
+                      const esPagada = c.estado === "PAGADA";
+                      return (
+                        <TableRow key={c.id} className="text-xs hover:bg-muted/30">
+                          <TableCell className="text-center font-mono font-bold py-1.5">{c.nroCuota}</TableCell>
+                          <TableCell className="py-1.5">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px]",
+                                esPagada
+                                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                  : "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                              )}
+                            >
+                              {c.estado}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-1.5">
+                            {esPagada ? (
+                              <span className="font-mono text-muted-foreground">{formatFecha(c.fechaVencimiento)}</span>
+                            ) : (
+                              <Input
+                                type="date"
+                                value={c.fechaVencimiento}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setModCuotasLista((prev) => {
+                                    const copy = [...prev];
+                                    copy[cIdx] = { ...copy[cIdx], fechaVencimiento: val };
+                                    return copy;
+                                  });
+                                }}
+                                className="h-7 w-32 text-xs font-mono"
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right py-1.5">
+                            {esPagada ? (
+                              <span className="font-mono font-semibold">S/. {c.capitalProgramado.toFixed(2)}</span>
+                            ) : (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min={c.capitalPagado}
+                                value={c.capitalProgramado}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setModCuotasLista((prev) => {
+                                    const copy = [...prev];
+                                    copy[cIdx] = { ...copy[cIdx], capitalProgramado: val };
+                                    return copy;
+                                  });
+                                }}
+                                className="h-7 w-28 text-right text-xs font-mono ml-auto"
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right py-1.5">
+                            {esPagada ? (
+                              <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                                S/. {c.interesProgramado.toFixed(2)}
+                              </span>
+                            ) : (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min={c.interesPagado}
+                                value={c.interesProgramado}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setModCuotasLista((prev) => {
+                                    const copy = [...prev];
+                                    copy[cIdx] = { ...copy[cIdx], interesProgramado: val };
+                                    return copy;
+                                  });
+                                }}
+                                className="h-7 w-24 text-right text-xs font-mono ml-auto text-emerald-600 dark:text-emerald-400"
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold py-1.5">
+                            S/. {(c.capitalProgramado + c.interesProgramado).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-foreground">
+                Observación Obligatoria de la Reprogramación *
+              </Label>
+              <Textarea
+                rows={2}
+                required
+                placeholder="Indique el motivo o acta de la reprogramación de cuotas (mínimo 5 caracteres)..."
+                value={modCuotasObservacion}
+                onChange={(e) => setModCuotasObservacion(e.target.value)}
+                className="text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Requerido para auditoría formal de reprogramación de créditos.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setModalModificarCuotas(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  procesando ||
+                  modCuotasObservacion.trim().length < 5 ||
+                  Math.abs(modCuotasLista.reduce((acc, c) => acc + (Number(c.capitalProgramado) || 0), 0) - modCuotasPrincipal) > 0.05
+                }
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {procesando ? "Guardando..." : "Guardar Reprogramación de Cuotas"}
               </Button>
             </DialogFooter>
           </form>

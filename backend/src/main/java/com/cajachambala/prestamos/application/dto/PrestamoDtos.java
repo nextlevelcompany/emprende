@@ -165,4 +165,59 @@ public class PrestamoDtos {
             BigDecimal totalInteresesGanados,
             long cuotasVencidasTotal
     ) {}
+
+    public record EditarPrestamoRequest(
+            @NotNull(message = "El periodo contable es obligatorio")
+            UUID periodoId,
+
+            @DecimalMin(value = "1.00", message = "El monto debe ser al menos S/. 1.00")
+            BigDecimal montoPrincipal,
+
+            @DecimalMin(value = "0.0000", message = "La tasa no puede ser negativa")
+            @DecimalMax(value = "1.0000", message = "La tasa no puede superar 100%")
+            BigDecimal tasaMensual,
+
+            @Min(value = 1, message = "Debe tener al menos 1 cuota")
+            @Max(value = 60, message = "Máximo 60 cuotas permitidas")
+            Short nroCuotas,
+
+            LocalDate fechaDesembolso,
+            LocalDate fechaPrimeraCuota,
+            String proposito,
+
+            @NotBlank(message = "Debe ingresar una observación o motivo de la modificación")
+            String observacion
+    ) {}
+
+    public record EliminarPrestamoRequest(
+            @NotNull(message = "El periodo contable es obligatorio")
+            UUID periodoId,
+
+            @NotBlank(message = "Debe ingresar un comentario o motivo de la eliminación")
+            @Size(min = 5, message = "El comentario debe tener al menos 5 caracteres")
+            String motivo
+    ) {}
+
+    public record ModificarCuotaItemRequest(
+            @NotNull(message = "El ID de la cuota es obligatorio")
+            UUID cuotaId,
+
+            @DecimalMin(value = "0.00", message = "El capital programado no puede ser negativo")
+            BigDecimal capitalProgramado,
+
+            @DecimalMin(value = "0.00", message = "El interés programado no puede ser negativo")
+            BigDecimal interesProgramado,
+
+            LocalDate fechaVencimiento
+    ) {}
+
+    public record ModificarCuotasPrestamoRequest(
+            @NotNull(message = "La lista de cuotas es obligatoria")
+            @NotEmpty(message = "Debe enviar al menos una cuota a modificar")
+            List<ModificarCuotaItemRequest> cuotas,
+
+            @NotBlank(message = "Debe ingresar una observación obligatoria para modificar las cuotas")
+            @Size(min = 5, message = "La observación debe tener al menos 5 caracteres")
+            String observacion
+    ) {}
 }

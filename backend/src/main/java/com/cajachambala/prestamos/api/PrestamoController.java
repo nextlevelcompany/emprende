@@ -105,4 +105,34 @@ public class PrestamoController {
         PrestamoDetalleResponse response = prestamoService.registrarPagoCuota(id, cuotaId, request);
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/{id}/asamblea")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PrestamoDetalleResponse> editarPrestamoAsamblea(
+            @PathVariable UUID id,
+            @Valid @RequestBody EditarPrestamoRequest request
+    ) {
+        PrestamoDetalleResponse response = prestamoService.editarPrestamoAsamblea(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}/asamblea")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> eliminarPrestamoAsamblea(
+            @PathVariable UUID id,
+            @Valid @RequestBody EliminarPrestamoRequest request
+    ) {
+        prestamoService.eliminarPrestamoAsamblea(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/cuotas")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PrestamoDetalleResponse> modificarCuotasPrestamo(
+            @PathVariable UUID id,
+            @Valid @RequestBody ModificarCuotasPrestamoRequest request
+    ) {
+        PrestamoDetalleResponse response = prestamoService.modificarCuotasPrestamo(id, request);
+        return ResponseEntity.ok(response);
+    }
 }

@@ -574,6 +574,248 @@ public class PrestamoService {
     }
 
     // ==========================================
+    // 7. Modificación y Anulación en Asamblea
+    // ==========================================
+
+    @Transactional
+    public PrestamoDetalleResponse editarPrestamoAsamblea(UUID prestamoId, EditarPrestamoRequest req) {
+        UUID cajaId = getCajaIdActual();
+        UUID userId = getUserIdActual();
+
+        if (req.observacion() == null || req.observacion().trim().isBlank()) {
+            throw new IllegalArgumentException("Debe ingresar una observación justificando la modificación del préstamo");
+        }
+
+        Periodo periodo = periodoRepository.findByIdAndCajaId(req.periodoId(), cajaId)
+                .orElseThrow(() -> new IllegalArgumentException("Periodo contable no encontrado"));
+
+        if (periodo.getEstado() == PeriodoEstado.CERRADO) {
+            throw new IllegalStateException("No se puede editar las condiciones de un préstamo cuando el periodo ya está cerrado.");
+        }
+
+        Prestamo prestamo = prestamoRepository.findByIdAndCajaId(prestamoId, cajaId)
+                .orElseThrow(() -> new IllegalArgumentException("Préstamo no encontrado"));
+
+        boolean tienePagos = prestamo.getCuotas() != null && prestamo.getCuotas().stream()
+                .anyMatch(c -> c.getEstado() == CuotaEstado.PAGADA
+                        || (c.getCapitalPagado() != null && c.getCapitalPagado().compareTo(BigDecimal.ZERO) > 0));
+
+        if (tienePagos) {
+            throw new IllegalStateException("No se puede editar un préstamo que ya cuenta con pagos registrados.");
+        }
+
+        BigDecimal nuevoPrincipal = req.montoPrincipal() != null ? req.montoPrincipal().setScale(2, RoundingMode.HALF_UP) : prestamo.getMontoPrincipal();
+        BigDecimal nuevaTasa = req.tasaMensual() != null ? req.tasaMensual() : prestamo.getTasaMensual();
+        Short nuevasCuotas = req.nroCuotas() != null ? req.nroCuotas() : prestamo.getNroCuotas();
+        LocalDate nuevaFechaDesembolso = req.fechaDesembolso() != null ? req.fechaDesembolso() : prestamo.getFechaDesembolso();
+        LocalDate nuevaFecha1raCuota = req.fechaPrimeraCuota() != null ? req.fechaPrimeraCuota() : prestamo.getFechaPrimeraCuota();
+
+        if (!nuevaFecha1raCuota.isAfter(nuevaFechaDesembolso)) {
+            throw new IllegalArgumentException("La fecha de primera cuota debe ser posterior a la fecha de desembolso");
+        }
+
+        prestamo.actualizarCondiciones(
+                nuevoPrincipal,
+                nuevaTasa,
+                nuevasCuotas,
+                nuevaFechaDesembolso,
+                nuevaFecha1raCuota,
+                req.proposito()
+        );
+
+        // Regenerar el cronograma de cuotas
+        prestamo.getCuotas().clear();
+        List<CuotaSimuladaResponse> simuladas = generarCronogramaSimulado(
+                nuevoPrincipal,
+                nuevaTasa,
+                nuevasCuotas.intValue(),
+                nuevaFecha1raCuota
+        );
+
+        for (CuotaSimuladaResponse sim : simuladas) {
+            CuotaPrestamo c = new CuotaPrestamo(
+                    prestamo,
+                    sim.nroCuota().shortValue(),
+                    sim.fechaVencimiento(),
+                    sim.capitalProgramado(),
+                    sim.interesProgramado()
+            );
+            prestamo.agregarCuota(c);
+        }
+
+        Prestamo guardado = prestamoRepository.save(prestamo);
+
+        // Sincronizar monto en la operación de egreso de caja
+        Concepto conceptoPrestamo = conceptoRepository.findByCodigo("PRESTAMO")
+                .orElseThrow(() -> new IllegalStateException("Concepto 'PRESTAMO' no encontrado en el catálogo"));
+
+        List<Operacion> operaciones = operacionRepository.findByCajaIdAndPeriodoIdAndEstadoOrderByFechaAscNroReciboAsc(
+                cajaId, periodo.getId(), OperacionEstado.VIGENTE
+        );
+
+        for (Operacion op : operaciones) {
+            if (op.getTipo() == FlujoTipo.EGRESO && op.getDetalles() != null) {
+                boolean coincidePrestamo = op.getDetalles().stream()
+                        .anyMatch(d -> Objects.equals(d.getPrestamoId(), guardado.getId()));
+                if (coincidePrestamo) {
+                    op.sincronizarDetalle(conceptoPrestamo.getId(), nuevoPrincipal, guardado.getId(), null);
+                    operacionRepository.save(op);
+                }
+            }
+        }
+
+        auditService.registrar(
+                cajaId,
+                userId,
+                UserRole.ADMIN,
+                "PRESTAMO_EDITADO_ASAMBLEA",
+                "prestamo",
+                guardado.getId(),
+                null,
+                Map.of(
+                        "numero", guardado.getNumero().toString(),
+                        "nuevoMonto", nuevoPrincipal.toString(),
+                        "nuevasCuotas", String.valueOf(nuevasCuotas),
+                        "observacion", req.observacion().trim()
+                ),
+                "127.0.0.1",
+                "Internal"
+        );
+
+        Socio socio = socioRepository.findByIdAndCajaId(guardado.getSocioId(), cajaId).orElse(null);
+        return toPrestamoDetalleResponse(guardado, socio);
+    }
+
+    @Transactional
+    public void eliminarPrestamoAsamblea(UUID prestamoId, EliminarPrestamoRequest req) {
+        UUID cajaId = getCajaIdActual();
+        UUID userId = getUserIdActual();
+
+        if (req.motivo() == null || req.motivo().trim().length() < 5) {
+            throw new IllegalArgumentException("Debe ingresar un comentario obligatorio con el motivo de la eliminación (mínimo 5 caracteres)");
+        }
+
+        Periodo periodo = periodoRepository.findByIdAndCajaId(req.periodoId(), cajaId)
+                .orElseThrow(() -> new IllegalArgumentException("Periodo contable no encontrado"));
+
+        if (periodo.getEstado() == PeriodoEstado.CERRADO) {
+            throw new IllegalStateException("No se puede eliminar un préstamo de un periodo cerrado. Solo se permite antes de cerrar el periodo.");
+        }
+
+        Prestamo prestamo = prestamoRepository.findByIdAndCajaId(prestamoId, cajaId)
+                .orElseThrow(() -> new IllegalArgumentException("Préstamo no encontrado"));
+
+        boolean tienePagos = prestamo.getCuotas() != null && prestamo.getCuotas().stream()
+                .anyMatch(c -> c.getEstado() == CuotaEstado.PAGADA
+                        || (c.getCapitalPagado() != null && c.getCapitalPagado().compareTo(BigDecimal.ZERO) > 0)
+                        || (c.getInteresPagado() != null && c.getInteresPagado().compareTo(BigDecimal.ZERO) > 0));
+
+        if (tienePagos) {
+            throw new IllegalStateException("No se puede eliminar un préstamo que ya cuenta con cuotas pagadas o abonos registrados.");
+        }
+
+        // Anular la operación de egreso en el libro de caja
+        List<Operacion> operaciones = operacionRepository.findByCajaIdAndPeriodoIdAndEstadoOrderByFechaAscNroReciboAsc(
+                cajaId, periodo.getId(), OperacionEstado.VIGENTE
+        );
+
+        for (Operacion op : operaciones) {
+            if (op.getTipo() == FlujoTipo.EGRESO && op.getDetalles() != null) {
+                boolean coincidePrestamo = op.getDetalles().stream()
+                        .anyMatch(d -> Objects.equals(d.getPrestamoId(), prestamo.getId()));
+                if (coincidePrestamo) {
+                    op.anular(userId, "Préstamo eliminado en asamblea: " + req.motivo().trim());
+                    operacionRepository.save(op);
+                }
+            }
+        }
+
+        // Limpiar cuotas y anular el préstamo formalmente
+        prestamo.getCuotas().clear();
+        prestamo.anular(req.motivo().trim());
+        prestamoRepository.save(prestamo);
+
+        auditService.registrar(
+                cajaId,
+                userId,
+                UserRole.ADMIN,
+                "PRESTAMO_ELIMINADO_ASAMBLEA",
+                "prestamo",
+                prestamo.getId(),
+                null,
+                Map.of(
+                        "numero", prestamo.getNumero().toString(),
+                        "monto", prestamo.getMontoPrincipal().toString(),
+                        "periodoId", periodo.getId().toString(),
+                        "motivo", req.motivo().trim()
+                ),
+                "127.0.0.1",
+                "Internal"
+        );
+    }
+
+    @Transactional
+    public PrestamoDetalleResponse modificarCuotasPrestamo(UUID prestamoId, ModificarCuotasPrestamoRequest req) {
+        UUID cajaId = getCajaIdActual();
+        UUID userId = getUserIdActual();
+
+        if (req.observacion() == null || req.observacion().trim().length() < 5) {
+            throw new IllegalArgumentException("Debe ingresar una observación obligatoria justificando la modificación de cuotas (mínimo 5 caracteres)");
+        }
+
+        Prestamo prestamo = prestamoRepository.findByIdAndCajaId(prestamoId, cajaId)
+                .orElseThrow(() -> new IllegalArgumentException("Préstamo no encontrado"));
+
+        if (prestamo.getEstado() != PrestamoEstado.VIGENTE) {
+            throw new IllegalStateException("Solo se pueden modificar las cuotas de un préstamo en estado VIGENTE (actual: " + prestamo.getEstado() + ")");
+        }
+
+        Map<UUID, CuotaPrestamo> cuotasMap = prestamo.getCuotas().stream()
+                .collect(Collectors.toMap(CuotaPrestamo::getId, c -> c));
+
+        for (ModificarCuotaItemRequest item : req.cuotas()) {
+            CuotaPrestamo cuota = cuotasMap.get(item.cuotaId());
+            if (cuota == null) {
+                throw new IllegalArgumentException("La cuota con ID " + item.cuotaId() + " no pertenece a este préstamo");
+            }
+            cuota.modificarProgramacion(item.capitalProgramado(), item.interesProgramado(), item.fechaVencimiento());
+        }
+
+        // Validar consistencia financiera: la suma de capital programado debe ser igual al monto principal
+        BigDecimal sumaCapital = prestamo.getCuotas().stream()
+                .map(CuotaPrestamo::getCapitalProgramado)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (sumaCapital.compareTo(prestamo.getMontoPrincipal()) != 0) {
+            throw new IllegalArgumentException(
+                    "La suma de los capitales programados (S/. " + sumaCapital + ") debe ser exactamente igual al monto principal del préstamo (S/. " + prestamo.getMontoPrincipal() + ")"
+            );
+        }
+
+        Prestamo guardado = prestamoRepository.save(prestamo);
+
+        auditService.registrar(
+                cajaId,
+                userId,
+                UserRole.ADMIN,
+                "CUOTAS_PRESTAMO_MODIFICADAS",
+                "prestamo",
+                guardado.getId(),
+                null,
+                Map.of(
+                        "numero", guardado.getNumero().toString(),
+                        "observacion", req.observacion().trim(),
+                        "cuotasModificadas", String.valueOf(req.cuotas().size())
+                ),
+                "127.0.0.1",
+                "Internal"
+        );
+
+        Socio socio = socioRepository.findByIdAndCajaId(guardado.getSocioId(), cajaId).orElse(null);
+        return toPrestamoDetalleResponse(guardado, socio);
+    }
+
+    // ==========================================
     // Mapeadores Auxiliares
     // ==========================================
 

@@ -161,6 +161,28 @@ public class CuotaPrestamo {
         }
     }
 
+    public void modificarProgramacion(BigDecimal capitalProgramado, BigDecimal interesProgramado, LocalDate fechaVencimiento) {
+        if (this.estado == CuotaEstado.PAGADA) {
+            throw new IllegalStateException("No se puede modificar una cuota que ya ha sido completamente pagada");
+        }
+        if (capitalProgramado != null) {
+            if (this.capitalPagado.compareTo(capitalProgramado) > 0) {
+                throw new IllegalArgumentException("El nuevo capital programado no puede ser menor al capital ya pagado (" + this.capitalPagado + ")");
+            }
+            this.capitalProgramado = capitalProgramado.setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+        if (interesProgramado != null) {
+            if (this.interesPagado.compareTo(interesProgramado) > 0) {
+                throw new IllegalArgumentException("El nuevo interés programado no puede ser menor al interés ya pagado (" + this.interesPagado + ")");
+            }
+            this.interesProgramado = interesProgramado.setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+        if (fechaVencimiento != null) {
+            this.fechaVencimiento = fechaVencimiento;
+        }
+        this.updatedAt = Instant.now();
+    }
+
     // Getters y Setters
     public UUID getId() { return id; }
     public Prestamo getPrestamo() { return prestamo; }
