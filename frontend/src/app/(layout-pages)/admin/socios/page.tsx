@@ -23,6 +23,8 @@ import {
 import { toast } from "sonner";
 import { cn, formatFecha } from "@/lib/utils";
 
+import { ModalEditarDatosPersonales } from "@/components/socios/modal-editar-datos-personales";
+import { extraerObservaciones } from "@/lib/socios-datos-personales";
 import {
   Card,
   CardContent,
@@ -68,6 +70,8 @@ interface Socio {
   nombreCompleto: string;
   documentoTipo: string;
   documentoEnmascarado: string;
+  documentoNumero?: string | null;
+  numeroDocumento?: string | null;
   telefono: string | null;
   email: string | null;
   direccion: string | null;
@@ -116,21 +120,14 @@ export default function SociosPage() {
     passwordTemporal: "",
   });
 
-  const [formEditar, setFormEditar] = React.useState({
-    nombres: "",
-    apellidos: "",
-    telefono: "",
-    email: "",
-    direccion: "",
-    notas: "",
-  });
-
   const [guardando, setGuardando] = React.useState(false);
 
   const cargarSocios = React.useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/socios");
+      const res = await fetch(`/api/socios?t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error("Error al obtener lista de socios");
       const data = await res.json();
       const lista = Array.isArray(data) ? data : data.content || [];
@@ -251,28 +248,6 @@ export default function SociosPage() {
       if (!res.ok) throw new Error(data.detail || data.message || "Error al habilitar acceso");
       toast.success(`Acceso web habilitado exitosamente para ${modalAcceso.nombreCompleto}`);
       setModalAcceso(null);
-      cargarSocios();
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const handleEditarSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!modalEditar) return;
-    try {
-      setGuardando(true);
-      const res = await fetch(`/api/socios/${modalEditar.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formEditar),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || data.message || "Error al actualizar");
-      toast.success("Datos del socio actualizados");
-      setModalEditar(null);
       cargarSocios();
     } catch (err: any) {
       toast.error(err.message);
@@ -450,14 +425,19 @@ export default function SociosPage() {
                     <TableCell className="py-3 max-w-[220px]">
                       <div className="font-medium text-foreground leading-snug">{s.nombreCompleto}</div>
                       {s.direccion && <div className="text-[11px] text-muted-foreground truncate">{s.direccion}</div>}
-                      {s.notas && (
-                        <div className={cn(
-                          "text-[11px] mt-0.5 line-clamp-2",
-                          s.estado === "RETIRADO" ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"
-                        )} title={s.notas}>
-                          {s.notas}
-                        </div>
-                      )}
+                      {s.notas && (() => {
+                        const obs = extraerObservaciones(s.notas);
+                        const texto = obs || (s.notas.startsWith("{") ? "" : s.notas);
+                        if (!texto) return null;
+                        return (
+                          <div className={cn(
+                            "text-[11px] mt-0.5 line-clamp-2",
+                            s.estado === "RETIRADO" ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"
+                          )} title={texto}>
+                            {texto}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-center py-3">
                       <Badge variant={s.tipo === "SOCIO" ? "default" : "secondary"} className="text-[11px] px-2 py-0">
@@ -465,7 +445,7 @@ export default function SociosPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap py-3">
-                      {s.documentoTipo}: {s.documentoEnmascarado}
+                      {s.documentoTipo}: {s.documentoNumero || s.numeroDocumento || s.documentoEnmascarado}
                     </TableCell>
                     <TableCell className="py-3">
                       <div className="flex flex-col gap-0.5 text-xs text-muted-foreground whitespace-nowrap">
@@ -546,19 +526,9 @@ export default function SociosPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            setModalEditar(s);
-                            setFormEditar({
-                              nombres: s.nombres,
-                              apellidos: s.apellidos,
-                              telefono: s.telefono || "",
-                              email: s.email || "",
-                              direccion: s.direccion || "",
-                              notas: s.notas || "",
-                            });
-                          }}
+                          onClick={() => setModalEditar(s)}
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          title="Editar socio"
+                          title="Editar datos personales del socio"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -850,82 +820,13 @@ export default function SociosPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: Editar Socio */}
-      <Dialog open={!!modalEditar} onOpenChange={(open) => !open && setModalEditar(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit className="h-5 w-5 text-primary" />
-              Editar Socio #{modalEditar?.codigo}
-            </DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleEditarSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Nombres</Label>
-                <Input
-                  value={formEditar.nombres}
-                  onChange={(e) => setFormEditar({ ...formEditar, nombres: e.target.value })}
-                  className="h-9"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Apellidos</Label>
-                <Input
-                  value={formEditar.apellidos}
-                  onChange={(e) => setFormEditar({ ...formEditar, apellidos: e.target.value })}
-                  className="h-9"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Teléfono</Label>
-                <Input
-                  value={formEditar.telefono}
-                  onChange={(e) => setFormEditar({ ...formEditar, telefono: e.target.value })}
-                  className="h-9"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Email</Label>
-                <Input
-                  type="email"
-                  value={formEditar.email}
-                  onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
-                  className="h-9"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Dirección</Label>
-              <Input
-                value={formEditar.direccion}
-                onChange={(e) => setFormEditar({ ...formEditar, direccion: e.target.value })}
-                className="h-9"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Notas</Label>
-              <Textarea
-                rows={2}
-                value={formEditar.notas}
-                onChange={(e) => setFormEditar({ ...formEditar, notas: e.target.value })}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalEditar(null)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={guardando}>
-                {guardando ? "Guardando..." : "Actualizar"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* MODAL: Editar Datos Personales del Socio */}
+      <ModalEditarDatosPersonales
+        open={!!modalEditar}
+        onOpenChange={(open) => !open && setModalEditar(null)}
+        socio={modalEditar}
+        onSuccess={cargarSocios}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import com.cajachambala.acciones.infrastructure.persistence.CertificadoAccionRep
 import com.cajachambala.acciones.infrastructure.persistence.TransferenciaAccionRepository;
 import com.cajachambala.identidad.domain.UserRole;
 import com.cajachambala.identidad.infrastructure.audit.AuditService;
+import com.cajachambala.identidad.infrastructure.security.AesGcmCryptoService;
 import com.cajachambala.shared.infrastructure.security.UserContext;
 import com.cajachambala.shared.infrastructure.security.UserContextHolder;
 import com.cajachambala.socios.domain.Socio;
@@ -26,17 +27,20 @@ public class AccionService {
     private final TransferenciaAccionRepository transferenciaRepository;
     private final SocioRepository socioRepository;
     private final AuditService auditService;
+    private final AesGcmCryptoService cryptoService;
 
     public AccionService(
             CertificadoAccionRepository certificadoRepository,
             TransferenciaAccionRepository transferenciaRepository,
             SocioRepository socioRepository,
-            AuditService auditService
+            AuditService auditService,
+            AesGcmCryptoService cryptoService
     ) {
         this.certificadoRepository = certificadoRepository;
         this.transferenciaRepository = transferenciaRepository;
         this.socioRepository = socioRepository;
         this.auditService = auditService;
+        this.cryptoService = cryptoService;
     }
 
     @Transactional(readOnly = true)
@@ -304,6 +308,15 @@ public class AccionService {
     }
 
     private CertificadoAccionDto toCertificadoDto(CertificadoAccion c) {
+        String docTipo = (c.getSocio() != null && c.getSocio().getDocumentoTipo() != null)
+                ? c.getSocio().getDocumentoTipo() : "DNI";
+        String docNum = null;
+        if (c.getSocio() != null && c.getSocio().getDocumentoEnc() != null) {
+            try {
+                docNum = cryptoService.decryptString(c.getSocio().getDocumentoEnc());
+            } catch (Exception ignored) {}
+        }
+
         return new CertificadoAccionDto(
                 c.getId(),
                 c.getNumeroCertificado(),
@@ -321,7 +334,9 @@ public class AccionService {
                 c.getEstado(),
                 c.getTipoOrigen(),
                 c.getCertificadoOrigenId(),
-                c.getObservaciones()
+                c.getObservaciones(),
+                docTipo,
+                docNum
         );
     }
 

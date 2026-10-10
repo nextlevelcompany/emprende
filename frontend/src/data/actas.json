@@ -1,0 +1,124 @@
+[
+  {
+    "id": "acta-001",
+    "numeroActa": "Acta N° 01-2021",
+    "tipo": "EXTRAORDINARIA",
+    "tipoTitulo": "Asamblea General de Constitución y Fundación",
+    "fecha": "2021-06-08",
+    "hora": "10:00",
+    "lugar": "Local Comunal del Anexo de Chambala",
+    "presidente": "PONCE HUILCAYA ADELA",
+    "secretario": "MORAN LAIME CIRILO",
+    "asistentes": 28,
+    "quorumPorcentaje": 100.0,
+    "agenda": [
+      "Constitución y fundación formal de la Caja Comunal Emprende Chambala (UNICA)",
+      "Aprobación del Estatuto y Reglamento Interno de Operaciones",
+      "Fijación del valor nominal de la acción en S/. 30.00",
+      "Elección e instalación de la primera Junta Directiva"
+    ],
+    "acuerdos": [
+      "Aprobar por aclamación unánime la fundación de la Caja Comunal 'Emprende Chambala'.",
+      "Establecer el aporte de capital inicial y fijar el valor de la acción en treinta y 00/100 soles (S/. 30.00).",
+      "Fijar el día 08 de cada mes como fecha oficial de asamblea ordinaria de aportes y pagos de cuotas.",
+      "Elegir a la Junta Directiva presidida por Adela Ponce Huilcaya."
+    ],
+    "resumen": "Reunión fundacional donde los comuneros de Chambala acuerdan constituir la UNICA con un capital inicial y aprueban las normas de ahorro y crédito.",
+    "archivoNombre": "Acta_01_2021_Constitucion_Firmada.pdf",
+    "archivoTipo": "application/pdf",
+    "archivoTamano": 245000,
+    "archivoData": "",
+    "fechaRegistro": "2021-06-08"
+  },
+  {
+    "id": "acta-002",
+    "numeroActa": "Acta N° 12-2023",
+    "tipo": "ORDINARIA",
+    "tipoTitulo": "Asamblea General Ordinaria - Cierre de Ejercicio y Reparto",
+    "fecha": "2023-06-08",
+    "hora": "14:00",
+    "lugar": "Local Comunal de Chambala",
+    "presidente": "PONCE HUILCAYA ADELA",
+    "secretario": "MORAN LAIME CIRILO",
+    "asistentes": 34,
+    "quorumPorcentaje": 94.4,
+    "agenda": [
+      "Presentación y aprobación del Balance General del Ejercicio 2022-2023",
+      "Liquidación de intereses generados por créditos otorgados",
+      "Aprobación de la distribución de utilidades a S/. 4.50 por acción",
+      "Evaluación de solicitudes de préstamos para la campaña agrícola"
+    ],
+    "acuerdos": [
+      "Aprobar el Balance Financiero presentado por tesorería con superávit operativo.",
+      "Distribuir el total de utilidades netas entre los socios activos en proporción exacta a sus acciones.",
+      "Autorizar una línea de crédito especial de hasta S/. 5,000 para capital de trabajo de los socios.",
+      "Ratificar la tasa de interés mensual de 5% sobre saldo de capital."
+    ],
+    "resumen": "Asamblea ordinaria de rendición de cuentas anual y distribución equitativa de utilidades correspondientes al ejercicio 2023.",
+    "archivoNombre": "Acta_12_2023_Distribucion_Utilidades.pdf",
+    "archivoTipo": "application/pdf",
+    "archivoTamano": 312000,
+    "archivoData": "",
+    "fechaRegistro": "2023-06-08"
+  },
+  {
+    "id": "acta-003",
+    "numeroActa": "Acta N° 24-2024",
+    "tipo": "ORDINARIA",
+    "tipoTitulo": "Asamblea General Anual y Renovación de Directiva",
+    "fecha": "2024-06-08",
+    "hora": "14:30",
+    "lugar": "Local Comunal de Chambala",
+    "presidente": "PONCE HUILCAYA ADELA",
+    "secretario": "MORAN LAIME CIRILO",
+    "asistentes": 36,
+    "quorumPorcentaje": 97.2,
+    "agenda": [
+      "Rendición de cuentas de ingresos, egresos y cartera de préstamos 2023-2024",
+      "Reparto y pago de dividendos en efectivo y opción de reinversión en acciones",
+      "Admisión de nuevos integrantes en calidad de socios y clientes externos",
+      "Ratificación de la Junta Directiva para el periodo 2024-2026"
+    ],
+    "acuerdos": [
+      "Aprobar la memoria anual de gestión 2023-2024.",
+      "Efectuar el pago de utilidades en asamblea y permitir a los socios reinvertir en compra de nuevas acciones.",
+      "Aprobar la incorporación de nuevos comuneros con suscripción mínima de 2 acciones.",
+      "Ratificar la confianza en la directiva para continuar la gestión institucional."
+    ],
+    "resumen": "Asamblea general con quorum pleno para aprobación de estados financieros, pago de utilidades y fortalecimiento patrimonial de la Caja.",
+    "archivoNombre": "Acta_24_2024_Asamblea_General_Anual.pdf",
+    "archivoTipo": "application/pdf",
+    "archivoTamano": 289000,
+    "archivoData": "",
+    "fechaRegistro": "2024-06-08"
+  },
+  {
+    "id": "acta-004",
+    "numeroActa": "Acta N° 09-2024",
+    "tipo": "MENSUAL",
+    "tipoTitulo": "Reunión Mensual Ordinaria de Aportes y Cobranza",
+    "fecha": "2024-09-08",
+    "hora": "15:00",
+    "lugar": "Local Comunal de Chambala",
+    "presidente": "PONCE HUILCAYA ADELA",
+    "secretario": "MORAN LAIME CIRILO",
+    "asistentes": 35,
+    "quorumPorcentaje": 94.6,
+    "agenda": [
+      "Cobranza regular de cuotas de créditos vigentes de setiembre 2024",
+      "Recepción de aportes voluntarios para incremento de acciones",
+      "Evaluación de nuevas solicitudes de crédito de emergencia"
+    ],
+    "acuerdos": [
+      "Cobro conforme de amortizaciones e intereses mensuales.",
+      "Aprobación de 3 solicitudes de crédito con desembolso inmediato en asamblea.",
+      "Fijación de la próxima asamblea para el 8 de octubre de 2024."
+    ],
+    "resumen": "Reunión mensual correspondiente a setiembre 2024 para cobro de cuotas y desembolso de nuevos créditos aprobados.",
+    "archivoNombre": "Acta_09_2024_Reunion_Mensual.pdf",
+    "archivoTipo": "application/pdf",
+    "archivoTamano": 198000,
+    "archivoData": "",
+    "fechaRegistro": "2024-09-08"
+  }
+]

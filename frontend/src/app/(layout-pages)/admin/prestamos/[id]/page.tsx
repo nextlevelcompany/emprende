@@ -16,9 +16,11 @@ import {
   Receipt,
   RefreshCw,
   TrendingUp,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatFecha } from "@/lib/utils";
+import { descargarExpedientePrestamoCompletoPDF } from "@/lib/prestamo-documento-pdf";
 
 import {
   Card,
@@ -126,6 +128,20 @@ export default function PrestamoDetallePage() {
   const [fechaPago, setFechaPago] = React.useState(new Date().toISOString().split("T")[0]);
   const [observacion, setObservacion] = React.useState("");
   const [cobrando, setCobrando] = React.useState(false);
+  const [descargando, setDescargando] = React.useState(false);
+
+  const handleDescargarPDF = async () => {
+    if (!id) return;
+    try {
+      setDescargando(true);
+      await descargarExpedientePrestamoCompletoPDF(id);
+      toast.success("Documento de crédito, pagaré y firmas descargado con éxito");
+    } catch (err: any) {
+      toast.error(err?.message || "Error al generar el documento en PDF");
+    } finally {
+      setDescargando(false);
+    }
+  };
 
   const cargarDetalle = React.useCallback(async () => {
     if (!id) return;
@@ -298,6 +314,17 @@ export default function PrestamoDetallePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleDescargarPDF}
+            disabled={descargando}
+            className="bg-primary hover:bg-primary/90 text-white font-medium shadow-sm gap-1.5"
+            title="Descargar Documento Oficial de Crédito, Pagaré y Firmas de Directiva en PDF"
+          >
+            <FileDown className={cn("h-4 w-4", descargando && "animate-bounce")} />
+            {descargando ? "Generando PDF..." : "Descargar Pagaré / PDF"}
+          </Button>
           <Button variant="outline" size="sm" onClick={cargarDetalle}>
             <RefreshCw className={cn("h-4 w-4 mr-1", loading && "animate-spin")} />
             Actualizar

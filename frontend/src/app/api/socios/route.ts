@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
+import { enriquecerSocioConDatosPersonales } from "@/lib/socios-datos-personales";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +19,21 @@ export async function GET(req: NextRequest) {
     } catch {
       data = { detail: text || "Respuesta no JSON del servidor" };
     }
-    return NextResponse.json(data, { status: backendRes.status });
+
+    if (data && Array.isArray(data.content)) {
+      data.content = data.content.map(enriquecerSocioConDatosPersonales);
+    } else if (Array.isArray(data)) {
+      data = data.map(enriquecerSocioConDatosPersonales);
+    }
+
+    return NextResponse.json(data, {
+      status: backendRes.status,
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ detail: error?.message || "Error al listar socios" }, { status: 500 });
   }

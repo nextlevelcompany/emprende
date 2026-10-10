@@ -33,8 +33,18 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Filter,
+  Edit,
+  FileCheck,
+  Upload,
+  Download,
+  Eye,
+  XCircle,
+  FileText,
+  Image as ImageIcon,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { descargarExpedientePrestamoCompletoPDF } from "@/lib/prestamo-documento-pdf";
 import {
   ResponsiveContainer,
   PieChart,
@@ -77,12 +87,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ModalEditarDatosPersonales } from "@/components/socios/modal-editar-datos-personales";
+import {
+  parseFichaSocio,
+  extraerObservaciones,
+  formatTamanoArchivo,
+  DocumentoAdjunto,
+} from "@/lib/socios-datos-personales";
 
 // Interfaces
 interface SocioItem {
   id: string;
   codigo: number;
+  nombres?: string;
+  apellidos?: string;
   nombreCompleto: string;
+  documentoTipo?: string;
+  documentoEnmascarado?: string;
   estado: string;
   tipo: string;
   telefono: string | null;
@@ -165,39 +192,47 @@ function DetalleSocioContent() {
   const [filtroAnio, setFiltroAnio] = React.useState<string>("TODOS");
   const [filtroTexto, setFiltroTexto] = React.useState("");
 
-  // Cargar lista de socios
-  React.useEffect(() => {
-    async function fetchSocios() {
-      try {
-        setLoadingSocios(true);
-        const res = await fetch("/api/socios?size=100");
-        if (!res.ok) throw new Error("Error al cargar lista de socios");
-        const data = await res.json();
-        const lista: SocioItem[] = Array.isArray(data) ? data : data.content || [];
-        setSocios(lista);
+  const [modalEditar, setModalEditar] = React.useState(false);
+  const [docParaVer, setDocParaVer] = React.useState<DocumentoAdjunto | null>(null);
 
-        if (lista.length > 0) {
-          if (urlSocioId && lista.some((s) => s.id === urlSocioId)) {
-            setSelectedId(urlSocioId);
-          } else {
-            setSelectedId(lista[0].id);
-          }
-        }
-      } catch (err: any) {
-        toast.error(err.message || "Error al obtener socios");
-      } finally {
-        setLoadingSocios(false);
+  // Cargar lista de socios
+  const fetchSocios = React.useCallback(async () => {
+    try {
+      setLoadingSocios(true);
+      const res = await fetch(`/api/socios?size=100&t=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("Error al cargar lista de socios");
+      const data = await res.json();
+      const lista: SocioItem[] = Array.isArray(data) ? data : data.content || [];
+      setSocios(lista);
+
+      if (lista.length > 0) {
+        setSelectedId((current) => {
+          if (current && lista.some((s) => s.id === current)) return current;
+          if (urlSocioId && lista.some((s) => s.id === urlSocioId)) return urlSocioId;
+          return lista[0].id;
+        });
       }
+    } catch (err: any) {
+      toast.error(err.message || "Error al obtener socios");
+    } finally {
+      setLoadingSocios(false);
     }
-    fetchSocios();
   }, [urlSocioId]);
+
+  React.useEffect(() => {
+    fetchSocios();
+  }, [fetchSocios]);
 
   // Cargar reporte del socio seleccionado
   const cargarReporte = React.useCallback(async (socioId: string) => {
     if (!socioId) return;
     try {
       setLoadingReporte(true);
-      const res = await fetch(`/api/reportes/socio/${socioId}`);
+      const res = await fetch(`/api/reportes/socio/${socioId}?t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || "Error al cargar estado de cuenta del socio");
@@ -222,6 +257,42 @@ function DetalleSocioContent() {
   const socioInfoExtra = React.useMemo(() => {
     return socios.find((s) => s.id === selectedId);
   }, [socios, selectedId]);
+
+  // Socio adaptado para modal y ficha
+  const socioParaEditar = React.useMemo(() => {
+    if (!socioInfoExtra && !reporte?.socio) return null;
+    return {
+      id: selectedId,
+      codigo: reporte?.socio.codigo || socioInfoExtra?.codigo || 0,
+      nombres: reporte?.socio.nombres || socioInfoExtra?.nombres || "",
+      apellidos: reporte?.socio.apellidos || socioInfoExtra?.apellidos || "",
+      nombreCompleto: reporte?.socio.nombreCompleto || socioInfoExtra?.nombreCompleto || "",
+      telefono: reporte?.socio.telefono || socioInfoExtra?.telefono || null,
+      email: socioInfoExtra?.email || null,
+      direccion: socioInfoExtra?.direccion || null,
+      documentoTipo: reporte?.socio.documentoTipo || socioInfoExtra?.documentoTipo || "DNI",
+      documentoNumero: reporte?.socio.documentoNumero || "",
+      documentoEnmascarado: socioInfoExtra?.documentoEnmascarado || "",
+      notas: socioInfoExtra?.notas || null,
+    };
+  }, [selectedId, socioInfoExtra, reporte]);
+
+  const fichaDatos = React.useMemo(() => {
+    return parseFichaSocio(socioParaEditar);
+  }, [socioParaEditar]);
+
+  const handleDescargarDoc = (doc: DocumentoAdjunto) => {
+    try {
+      const link = document.createElement("a");
+      link.href = doc.data;
+      link.download = doc.nombre;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      toast.error("No se pudo descargar el archivo");
+    }
+  };
 
   // Filtrado de socios para el selector rápido
   const sociosFiltrados = React.useMemo(() => {
@@ -533,6 +604,15 @@ function DetalleSocioContent() {
             Actualizar
           </Button>
           <Button
+            size="sm"
+            onClick={() => setModalEditar(true)}
+            disabled={!socioParaEditar}
+            className="gap-1.5 shadow-sm"
+          >
+            <Edit className="h-4 w-4" />
+            Editar Datos Personales
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={() => window.print()}
@@ -644,13 +724,22 @@ function DetalleSocioContent() {
                   </div>
                 </div>
 
-                <div className="text-left sm:text-right">
-                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono bg-background border px-3 py-1 rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModalEditar(true)}
+                    className="gap-1.5 shadow-sm text-xs bg-background h-8"
+                  >
+                    <Edit className="h-3.5 w-3.5 text-primary" />
+                    Editar Datos Personales
+                  </Button>
+                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono bg-background border px-3 py-1 rounded-md h-8">
                     <Calendar className="h-3.5 w-3.5 text-primary" />
                     <span>Primer Aporte / Ingreso: <strong>{formatFecha(reporte.socio.fechaIngreso)}</strong></span>
                   </div>
                   {socioInfoExtra?.fechaRetiro && (
-                    <div className="text-[11px] text-destructive font-mono mt-1">
+                    <div className="text-[11px] text-destructive font-mono mt-1 sm:mt-0">
                       Fecha de Baja: {formatFecha(socioInfoExtra.fechaRetiro)}
                     </div>
                   )}
@@ -658,25 +747,26 @@ function DetalleSocioContent() {
               </div>
             </CardHeader>
 
-            <CardContent className="pt-4">
+            <CardContent className="pt-4 space-y-4">
+              {/* Datos de contacto y acceso */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                 <div className="space-y-1">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <Phone className="h-3.5 w-3.5" /> Teléfono
                   </span>
-                  <p className="font-medium text-foreground">{reporte.socio.telefono || "No registrado"}</p>
+                  <p className="font-medium text-foreground">{fichaDatos.telefono || reporte.socio.telefono || "No registrado"}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <Mail className="h-3.5 w-3.5" /> Correo Electrónico
                   </span>
-                  <p className="font-medium text-foreground truncate">{socioInfoExtra?.email || "No registrado"}</p>
+                  <p className="font-medium text-foreground truncate">{fichaDatos.email || socioInfoExtra?.email || "No registrado"}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" /> Domicilio / Residencia
                   </span>
-                  <p className="font-medium text-foreground truncate">{socioInfoExtra?.direccion || "Chambala, Huancayo"}</p>
+                  <p className="font-medium text-foreground truncate">{fichaDatos.direccion || socioInfoExtra?.direccion || "Chambala, Huancayo"}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-muted-foreground flex items-center gap-1">
@@ -692,13 +782,191 @@ function DetalleSocioContent() {
                 </div>
               </div>
 
-              {socioInfoExtra?.notas && (
-                <div className="mt-4 p-3 bg-muted/40 rounded-md border text-xs">
+              {/* SECCIÓN: DATOS PERSONALES DE LA FICHA OFICIAL */}
+              <div className="rounded-lg border bg-muted/20 p-3.5 space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                      DATOS PERSONALES (FICHA OFICIAL DEL PADRÓN)
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModalEditar(true)}
+                    className="h-7 text-xs gap-1 bg-background"
+                  >
+                    <Edit className="h-3 w-3 text-primary" />
+                    Editar Ficha
+                  </Button>
+                </div>
+
+                {/* Campos: Edad, Sexo, Estado Civil, Ocupación */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Edad</span>
+                    <p className="font-medium text-foreground">
+                      {fichaDatos.edad ? `${fichaDatos.edad} años` : "No registrada"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Sexo</span>
+                    <p className="font-medium text-foreground">
+                      {fichaDatos.sexo ? (fichaDatos.sexo === "MASCULINO" ? "Masculino" : "Femenino") : "No registrado"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Estado Civil</span>
+                    <p className="font-medium text-foreground">
+                      {fichaDatos.estadoCivil || "No registrado"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Ocupación</span>
+                    <p className="font-medium text-foreground">
+                      {fichaDatos.ocupacion || "No registrada"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Carga Familiar y Documentación Adjunta */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Nº de personas que viven en casa</span>
+                    <p className="font-medium text-foreground">
+                      {fichaDatos.personasEnCasa ? `${fichaDatos.personasEnCasa} persona(s)` : "No registrado"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Copia de DNI</span>
+                    <div className="mt-0.5">
+                      {fichaDatos.adjuntaDni ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 gap-1 text-[11px]">
+                          <CheckCircle2 className="h-3 w-3" /> Sí adjunta
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground gap-1 text-[11px]">
+                          <XCircle className="h-3 w-3" /> No adjunta
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Copia de recibo de agua, luz o tel.</span>
+                    <div className="mt-0.5">
+                      {fichaDatos.adjuntaRecibo ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 gap-1 text-[11px]">
+                          <CheckCircle2 className="h-3 w-3" /> Sí adjunta
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground gap-1 text-[11px]">
+                          <XCircle className="h-3 w-3" /> No adjunta
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {fichaDatos.adjuntaOtros && (
+                  <div className="pt-1 text-xs">
+                    <span className="text-muted-foreground text-[11px]">Otros documentos adjuntos: </span>
+                    <span className="font-medium text-foreground">{fichaDatos.adjuntaOtros}</span>
+                  </div>
+                )}
+
+                {/* Documentos Digitales Adjuntos */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                      <FileCheck className="h-3.5 w-3.5 text-primary" />
+                      Documentos Digitales Adjuntos ({fichaDatos.documentos.length})
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setModalEditar(true)}
+                      className="h-6 text-[11px] gap-1 text-primary hover:text-primary"
+                    >
+                      <Upload className="h-3 w-3" />
+                      Subir archivo
+                    </Button>
+                  </div>
+
+                  {fichaDatos.documentos.length === 0 ? (
+                    <div className="p-3 rounded border border-dashed bg-background/50 text-center text-xs text-muted-foreground">
+                      No hay archivos digitales adjuntos (copia de DNI o recibos). Puede digitalizarlos pulsando en "Subir archivo".
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {fichaDatos.documentos.map((doc) => {
+                        const isPdf =
+                          doc.tipo === "application/pdf" || doc.nombre.toLowerCase().endsWith(".pdf");
+                        const isImg =
+                          doc.tipo.startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(doc.nombre);
+                        return (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between p-2 rounded border bg-background text-xs shadow-sm hover:border-primary/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <div className="h-7 w-7 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                                {isPdf ? (
+                                  <FileText className="h-3.5 w-3.5 text-destructive" />
+                                ) : isImg ? (
+                                  <ImageIcon className="h-3.5 w-3.5 text-blue-500" />
+                                ) : (
+                                  <FileText className="h-3.5 w-3.5 text-primary" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium truncate text-[11px]" title={doc.nombre}>
+                                  {doc.nombre}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {formatTamanoArchivo(doc.tamano)} &bull; {doc.fecha}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                onClick={() => setDocParaVer(doc)}
+                                title="Ver documento"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                onClick={() => handleDescargarDoc(doc)}
+                                title="Descargar documento"
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {extraerObservaciones(socioInfoExtra?.notas) && (
+                <div className="p-3 bg-muted/40 rounded-md border text-xs">
                   <span className="font-semibold text-foreground mr-1">Observaciones / Historial de Asambleas:</span>
                   <span className={cn(
-                    socioInfoExtra.estado === "RETIRADO" ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"
+                    socioInfoExtra?.estado === "RETIRADO" ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"
                   )}>
-                    {socioInfoExtra.notas}
+                    {extraerObservaciones(socioInfoExtra?.notas)}
                   </span>
                 </div>
               )}
@@ -1483,11 +1751,33 @@ function DetalleSocioContent() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right pr-4">
-                                <Link href={`/admin/prestamos/${p.prestamoId}`}>
-                                  <Button variant="ghost" size="sm" className="h-7 text-xs text-primary gap-1">
-                                    Ver Cuotas <ArrowUpRight className="h-3 w-3" />
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/10 gap-1 font-medium"
+                                    title="Descargar Documento Oficial de Crédito, Pagaré y Firmas en PDF"
+                                    onClick={async () => {
+                                      try {
+                                        toast.loading("Generando documento oficial de crédito...");
+                                        await descargarExpedientePrestamoCompletoPDF(p.prestamoId);
+                                        toast.dismiss();
+                                        toast.success("Documento de crédito, pagaré y firmas descargado con éxito");
+                                      } catch (err: any) {
+                                        toast.dismiss();
+                                        toast.error(err?.message || "Error al descargar el PDF");
+                                      }
+                                    }}
+                                  >
+                                    <FileDown className="h-3 w-3" />
+                                    <span>PDF</span>
                                   </Button>
-                                </Link>
+                                  <Link href={`/admin/prestamos/${p.prestamoId}`}>
+                                    <Button variant="ghost" size="sm" className="h-7 text-xs text-primary gap-1">
+                                      Ver Cuotas <ArrowUpRight className="h-3 w-3" />
+                                    </Button>
+                                  </Link>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))
@@ -1693,6 +1983,70 @@ function DetalleSocioContent() {
           </div>
         </>
       )}
+
+      {/* MODAL: Editar Datos Personales del Socio */}
+      <ModalEditarDatosPersonales
+        open={modalEditar}
+        onOpenChange={setModalEditar}
+        socio={socioParaEditar}
+        onSuccess={() => {
+          if (selectedId) cargarReporte(selectedId);
+          fetchSocios();
+        }}
+      />
+
+      {/* DIALOG: Previsualización de Documento */}
+      <Dialog open={!!docParaVer} onOpenChange={(open) => !open && setDocParaVer(null)}>
+        <DialogContent className="w-full sm:max-w-4xl md:max-w-5xl lg:max-w-6xl max-h-[92vh] overflow-y-auto p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between text-sm sm:text-base pr-6">
+              <span className="truncate">{docParaVer?.nombre}</span>
+              {docParaVer && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDescargarDoc(docParaVer)}
+                  className="h-7 gap-1 text-xs shrink-0"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Descargar
+                </Button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-2 flex items-center justify-center">
+            {docParaVer?.tipo.startsWith("image/") ||
+            /\.(jpe?g|png|webp|gif)$/i.test(docParaVer?.nombre || "") ? (
+              <img
+                src={docParaVer?.data}
+                alt={docParaVer?.nombre}
+                className="max-h-[75vh] w-auto max-w-full rounded border object-contain shadow-sm"
+              />
+            ) : docParaVer?.tipo === "application/pdf" ||
+              docParaVer?.nombre.toLowerCase().endsWith(".pdf") ? (
+              <iframe
+                src={docParaVer?.data}
+                title={docParaVer?.nombre}
+                className="w-full h-[75vh] rounded border shadow-sm"
+              />
+            ) : (
+              <div className="py-12 text-center text-muted-foreground space-y-2">
+                <FileText className="h-12 w-12 mx-auto text-primary" />
+                <p className="text-sm font-medium">Formato no previsualizable directamente</p>
+                <p className="text-xs">Puede descargarlo para verlo en su equipo.</p>
+                <Button
+                  size="sm"
+                  onClick={() => docParaVer && handleDescargarDoc(docParaVer)}
+                  className="mt-2"
+                >
+                  Descargar Archivo
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

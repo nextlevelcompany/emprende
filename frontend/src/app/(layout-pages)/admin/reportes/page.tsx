@@ -550,7 +550,7 @@ export default function ReportesPage() {
                       {(reporteAsamblea.operaciones || []).map((op, idx) => {
                         const isIngreso = op.tipo === "INGRESO";
                         return (
-                          <TableRow key={op.id || idx} className="text-xs hover:bg-muted/40">
+                          <TableRow key={`${op.id || "op"}-${idx}`} className="text-xs hover:bg-muted/40">
                             <TableCell className="font-mono font-medium">{op.nroRecibo || "-"}</TableCell>
                             <TableCell className="font-mono">{op.socioCodigo || "-"}</TableCell>
                             <TableCell className="font-medium">{op.socioNombre || "ASAMBLEA GENERAL"}</TableCell>

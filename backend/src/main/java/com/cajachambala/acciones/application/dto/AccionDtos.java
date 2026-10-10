@@ -27,8 +27,32 @@ public class AccionDtos {
             String estado,
             String tipoOrigen,
             UUID certificadoOrigenId,
-            String observaciones
-    ) {}
+            String observaciones,
+            String socioDocumentoTipo,
+            String socioDocumentoNumero
+    ) {
+        public CertificadoAccionDto(
+                UUID id,
+                Integer numeroCertificado,
+                UUID socioId,
+                Integer socioCodigo,
+                String socioNombre,
+                Integer serieInicio,
+                Integer serieFin,
+                Integer cantidad,
+                BigDecimal valorNominal,
+                BigDecimal totalMonto,
+                LocalDate fechaEmision,
+                UUID periodoId,
+                UUID operacionId,
+                String estado,
+                String tipoOrigen,
+                UUID certificadoOrigenId,
+                String observaciones
+        ) {
+            this(id, numeroCertificado, socioId, socioCodigo, socioNombre, serieInicio, serieFin, cantidad, valorNominal, totalMonto, fechaEmision, periodoId, operacionId, estado, tipoOrigen, certificadoOrigenId, observaciones, "DNI", null);
+        }
+    }
 
     public record TransferenciaAccionDto(
             UUID id,

@@ -20,9 +20,11 @@ import {
   Send,
   RefreshCw,
   Calculator,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatFecha } from "@/lib/utils";
+import { descargarExpedientePrestamoCompletoPDF } from "@/lib/prestamo-documento-pdf";
 
 import {
   Card,
@@ -143,6 +145,7 @@ export default function PrestamosPage() {
   const [modalNuevo, setModalNuevo] = React.useState(false);
   const [modalDesembolsar, setModalDesembolsar] = React.useState<Prestamo | null>(null);
   const [modalAprobar, setModalAprobar] = React.useState<Prestamo | null>(null);
+  const [descargandoId, setDescargandoId] = React.useState<string | null>(null);
 
   // Formulario Solicitud y Simulación
   const [formSocioId, setFormSocioId] = React.useState("");
@@ -629,6 +632,27 @@ export default function PrestamosPage() {
                               Cronograma
                             </Button>
                           </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/10 gap-1 font-medium"
+                            title="Descargar Documento Oficial de Crédito, Pagaré y Firmas en PDF"
+                            onClick={async () => {
+                              try {
+                                setDescargandoId(p.id);
+                                await descargarExpedientePrestamoCompletoPDF(p.id);
+                                toast.success(`Pagaré y contrato del préstamo #${p.numero} descargado en PDF`);
+                              } catch (err: any) {
+                                toast.error(err?.message || "Error al descargar el PDF");
+                              } finally {
+                                setDescargandoId(null);
+                              }
+                            }}
+                            disabled={descargandoId === p.id}
+                          >
+                            <FileDown className={cn("h-3.5 w-3.5", descargandoId === p.id && "animate-bounce")} />
+                            <span>PDF</span>
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

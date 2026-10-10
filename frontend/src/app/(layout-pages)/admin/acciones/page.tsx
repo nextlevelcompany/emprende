@@ -1,15 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Award,
   Users,
   ArrowRightLeft,
   Search,
   RefreshCw,
-  Printer,
   TrendingUp,
-  Info,
   Calendar,
   CheckCircle2,
   Clock,
@@ -18,9 +17,21 @@ import {
   Building2,
   Eye,
   FileCheck,
+  FileDown,
+  FileText,
+  Info,
+  UserCheck,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatFecha } from "@/lib/utils";
+import {
+  descargarCertificadoPDF,
+  descargarCertificadosSocioPDF,
+  descargarLoteCertificadosPDF,
+  descargarReporteAccionesPorFechasPDF,
+  type EmpresaPDFData,
+} from "@/lib/certificados-pdf";
 
 import {
   Card,
@@ -100,6 +111,19 @@ interface CertificadoAccion {
   tipoOrigen: string;
   certificadoOrigenId: string | null;
   observaciones: string | null;
+  socioDocumentoTipo?: string | null;
+  socioDocumentoNumero?: string | null;
+}
+
+interface DirectivaCargo {
+  id?: string;
+  cargo: string;
+  cargoTitulo: string;
+  nombreCompleto: string;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  activo: boolean;
+  orden: number;
 }
 
 interface TransferenciaAccion {
@@ -137,7 +161,18 @@ export default function AccionesPage() {
   const [searchSocio, setSearchSocio] = React.useState("");
   const [searchCert, setSearchCert] = React.useState("");
   const [filtroEstadoCert, setFiltroEstadoCert] = React.useState<string>("TODOS");
+  const [filtroFechaDesde, setFiltroFechaDesde] = React.useState<string>("");
+  const [filtroFechaHasta, setFiltroFechaHasta] = React.useState<string>("");
   const [activeTab, setActiveTab] = React.useState("socios");
+
+  // Modal Descarga por Fechas
+  const [modalDescargaFechas, setModalDescargaFechas] = React.useState(false);
+  const [descargaTipoModal, setDescargaTipoModal] = React.useState<"CERTIFICADOS" | "PADRON">("CERTIFICADOS");
+  const [modalFechaDesde, setModalFechaDesde] = React.useState<string>("");
+  const [modalFechaHasta, setModalFechaHasta] = React.useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [modalEstadoFiltro, setModalEstadoFiltro] = React.useState<string>("TODOS");
 
   // Modal de Transferencia
   const [modalTransferencia, setModalTransferencia] = React.useState(false);
@@ -155,17 +190,20 @@ export default function AccionesPage() {
     observaciones: "",
   });
 
-  // Modal Ver Certificado Formal
-  const [certificadoSeleccionado, setCertificadoSeleccionado] = React.useState<CertificadoAccion | null>(null);
+  const [directiva, setDirectiva] = React.useState<DirectivaCargo[]>([]);
+  const [empresa, setEmpresa] = React.useState<EmpresaPDFData | null>(null);
 
   const cargarDatos = React.useCallback(async () => {
     try {
       setLoading(true);
-      const [resResumen, resSocios, resCerts, resTrans] = await Promise.all([
-        fetch("/api/acciones/resumen").then((r) => r.json()),
-        fetch("/api/acciones/socios").then((r) => r.json()),
-        fetch("/api/acciones/certificados").then((r) => r.json()),
-        fetch("/api/acciones/transferencias").then((r) => r.json()),
+      const t = Date.now();
+      const [resResumen, resSocios, resCerts, resTrans, resDirectiva, resEmpresa] = await Promise.all([
+        fetch(`/api/acciones/resumen?t=${t}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/acciones/socios?t=${t}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/acciones/certificados?t=${t}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/acciones/transferencias?t=${t}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/directiva?soloActivos=true&t=${t}`, { cache: "no-store" }).then((r) => r.json()).catch(() => []),
+        fetch(`/api/empresa?t=${t}`, { cache: "no-store" }).then((r) => r.json()).catch(() => null),
       ]);
 
       if (resResumen && !resResumen.detail) setResumen(resResumen);
@@ -186,6 +224,8 @@ export default function AccionesPage() {
       }
       if (Array.isArray(resCerts)) setCertificados(resCerts);
       if (Array.isArray(resTrans)) setTransferencias(resTrans);
+      if (Array.isArray(resDirectiva)) setDirectiva(resDirectiva);
+      if (resEmpresa && !resEmpresa.detail) setEmpresa(resEmpresa);
     } catch (err: any) {
       toast.error("Error al cargar datos de matrícula de acciones");
     } finally {
@@ -291,9 +331,55 @@ export default function AccionesPage() {
         c.socioNombre.toLowerCase().includes(searchCert.toLowerCase()) ||
         c.numeroCertificado.toString().includes(searchCert) ||
         `#${c.serieInicio} - #${c.serieFin}`.includes(searchCert);
-      return matchEstado && matchSearch;
+      const matchFechaDesde = !filtroFechaDesde || (c.fechaEmision && c.fechaEmision >= filtroFechaDesde);
+      const matchFechaHasta = !filtroFechaHasta || (c.fechaEmision && c.fechaEmision <= filtroFechaHasta);
+      return matchEstado && matchSearch && matchFechaDesde && matchFechaHasta;
     });
-  }, [certificados, filtroEstadoCert, searchCert]);
+  }, [certificados, filtroEstadoCert, searchCert, filtroFechaDesde, filtroFechaHasta]);
+
+  const certificadosModal = React.useMemo(() => {
+    return certificados.filter((c) => {
+      const matchEstado = modalEstadoFiltro === "TODOS" || c.estado === modalEstadoFiltro;
+      const matchDesde = !modalFechaDesde || (c.fechaEmision && c.fechaEmision >= modalFechaDesde);
+      const matchHasta = !modalFechaHasta || (c.fechaEmision && c.fechaEmision <= modalFechaHasta);
+      return matchEstado && matchDesde && matchHasta;
+    });
+  }, [certificados, modalEstadoFiltro, modalFechaDesde, modalFechaHasta]);
+
+  const handleDescargarModalFechas = () => {
+    if (modalFechaDesde && modalFechaHasta && modalFechaDesde > modalFechaHasta) {
+      toast.error("La fecha inicial no puede ser posterior a la fecha final");
+      return;
+    }
+    if (certificadosModal.length === 0) {
+      toast.warning("No se encontraron certificados en el rango de fechas seleccionado");
+      return;
+    }
+
+    try {
+      if (descargaTipoModal === "CERTIFICADOS") {
+        const nombreArchivo = `Certificados_Acciones_${modalFechaDesde || "inicio"}_al_${modalFechaHasta || "actual"}`;
+        descargarLoteCertificadosPDF(certificadosModal, directiva, nombreArchivo, empresa);
+        toast.success(
+          `Se descargó el lote de ${certificadosModal.length} certificados oficiales en PDF`
+        );
+      } else {
+        descargarReporteAccionesPorFechasPDF(
+          certificadosModal,
+          directiva,
+          modalFechaDesde || undefined,
+          modalFechaHasta || undefined,
+          empresa
+        );
+        toast.success(
+          "Padrón y reporte de matrícula de acciones descargado exitosamente en PDF"
+        );
+      }
+      setModalDescargaFechas(false);
+    } catch (err: any) {
+      toast.error("Error al generar el archivo PDF: " + (err?.message || "error desconocido"));
+    }
+  };
 
   const formatMoneda = (val: number | null | undefined) => {
     return `S/ ${Number(val || 0).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -319,9 +405,30 @@ export default function AccionesPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild className="gap-2">
+            <Link href="/admin/directiva">
+              <UserCheck className="size-4" />
+              Firmas Directiva
+            </Link>
+          </Button>
+
           <Button variant="outline" size="sm" onClick={cargarDatos} disabled={loading} className="gap-2">
             <RefreshCw className={cn("size-4", loading && "animate-spin")} />
             Actualizar
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setModalFechaDesde(filtroFechaDesde || "");
+              setModalFechaHasta(filtroFechaHasta || new Date().toISOString().split("T")[0]);
+              setModalDescargaFechas(true);
+            }}
+            className="gap-2 border-emerald-600/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-xs"
+          >
+            <Calendar className="size-4 text-emerald-600" />
+            Descargar por Fechas
           </Button>
 
           <Button
@@ -522,7 +629,24 @@ export default function AccionesPage() {
                             {formatMoneda(s.totalCapitalAportado)}
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "text-xs",
+                                s.totalCertificados > 0 &&
+                                  "cursor-pointer hover:bg-primary/20 hover:text-primary transition-colors"
+                              )}
+                              title={
+                                s.totalCertificados > 0
+                                  ? "Ver certificados de este socio en pestaña de Certificados"
+                                  : undefined
+                              }
+                              onClick={() => {
+                                if (s.totalCertificados === 0) return;
+                                setActiveTab("certificados");
+                                setSearchCert(s.socioNombre);
+                              }}
+                            >
                               {s.totalCertificados} cert.
                             </Badge>
                           </TableCell>
@@ -534,22 +658,61 @@ export default function AccionesPage() {
                             )}
                           </TableCell>
                           <TableCell className="text-center">
-                            {s.totalAccionesActivas > 0 ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs gap-1"
-                                onClick={() => {
-                                  setSocioOrigenSeleccionado(s.socioId);
-                                  setModalTransferencia(true);
-                                }}
-                              >
-                                <ArrowRightLeft className="size-3.5" />
-                                Traspasar
-                              </Button>
-                            ) : (
-                              <span className="text-[11px] text-muted-foreground italic">Liquidado</span>
-                            )}
+                            <div className="flex items-center justify-center gap-1.5">
+                              {s.totalCertificados > 0 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-2.5 text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/10 shadow-sm font-medium"
+                                  title="Descargar Certificado(s) de Acciones en PDF"
+                                  onClick={() => {
+                                    const certsDelSocio = certificados.filter(
+                                      (c) => c.socioId === s.socioId
+                                    );
+                                    if (certsDelSocio.length === 0) {
+                                      toast.error("No se encontraron certificados para este socio");
+                                      return;
+                                    }
+                                    try {
+                                      const nombreSocio = s.socioNombre || certsDelSocio[0]?.socioNombre || "Socio";
+                                      const certsConNombre = certsDelSocio.map((c) => ({
+                                        ...c,
+                                        socioNombre: nombreSocio,
+                                      }));
+                                      descargarCertificadosSocioPDF(nombreSocio, certsConNombre, directiva, empresa);
+                                      toast.success(
+                                        certsConNombre.length === 1
+                                          ? `Certificado de ${nombreSocio} descargado en PDF`
+                                          : `${certsConNombre.length} certificados de ${nombreSocio} descargados en PDF`
+                                      );
+                                    } catch (err: any) {
+                                      toast.error("Error al generar el PDF del certificado");
+                                    }
+                                  }}
+                                >
+                                  <FileDown className="size-3.5" />
+                                  <span>Descargar PDF</span>
+                                </Button>
+                              )}
+                              {s.totalAccionesActivas > 0 ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-xs gap-1"
+                                  onClick={() => {
+                                    setSocioOrigenSeleccionado(s.socioId);
+                                    setModalTransferencia(true);
+                                  }}
+                                >
+                                  <ArrowRightLeft className="size-3.5" />
+                                  Traspasar
+                                </Button>
+                              ) : (
+                                !s.totalCertificados && (
+                                  <span className="text-[11px] text-muted-foreground italic">Liquidado</span>
+                                )
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -569,31 +732,89 @@ export default function AccionesPage() {
                 <div>
                   <CardTitle className="text-lg">Registro de Certificados de Acciones</CardTitle>
                   <CardDescription>
-                    Certificados nominativos emitidos, rangos de series de cada título y estado legal.
+                    Certificados nominativos oficiales con fecha institucional ({empresa?.fechaFundacion ? formatFecha(empresa.fechaFundacion) : "08/06/2021"}), rangos de series de cada título y estado legal.
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  {/* Selector Fecha Desde */}
+                  <div className="flex items-center gap-1.5 bg-background border rounded-md px-2.5 py-1 text-xs shadow-2xs">
+                    <Calendar className="size-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-[11px] text-muted-foreground font-medium">Desde:</span>
+                    <input
+                      type="date"
+                      value={filtroFechaDesde}
+                      onChange={(e) => setFiltroFechaDesde(e.target.value)}
+                      className="bg-transparent text-xs border-none focus:outline-none cursor-pointer"
+                      title="Filtrar por fecha de emisión desde"
+                    />
+                  </div>
+
+                  {/* Selector Fecha Hasta */}
+                  <div className="flex items-center gap-1.5 bg-background border rounded-md px-2.5 py-1 text-xs shadow-2xs">
+                    <span className="text-[11px] text-muted-foreground font-medium">Hasta:</span>
+                    <input
+                      type="date"
+                      value={filtroFechaHasta}
+                      onChange={(e) => setFiltroFechaHasta(e.target.value)}
+                      className="bg-transparent text-xs border-none focus:outline-none cursor-pointer"
+                      title="Filtrar por fecha de emisión hasta"
+                    />
+                  </div>
+
+                  {(filtroFechaDesde || filtroFechaHasta) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setFiltroFechaDesde("");
+                        setFiltroFechaHasta("");
+                      }}
+                      className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                      title="Limpiar filtro de fechas"
+                    >
+                      <X className="size-3.5 mr-1" />
+                      Limpiar
+                    </Button>
+                  )}
+
                   <Select value={filtroEstadoCert} onValueChange={setFiltroEstadoCert}>
-                    <SelectTrigger className="w-36 text-xs h-9">
+                    <SelectTrigger className="w-32 text-xs h-9">
                       <SelectValue placeholder="Estado" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="TODOS">Todos</SelectItem>
                       <SelectItem value="ACTIVO">Activos</SelectItem>
-                      <SelectItem value="DEVUELTO_RETIRO">Cancelados / Devueltos</SelectItem>
+                      <SelectItem value="DEVUELTO_RETIRO">Cancelados</SelectItem>
                       <SelectItem value="TRANSFERIDO">Transferidos</SelectItem>
                     </SelectContent>
                   </Select>
 
-                  <div className="relative w-full sm:w-64">
+                  <div className="relative w-full sm:w-52">
                     <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                     <Input
-                      placeholder="Buscar por socio o N° cert..."
+                      placeholder="Buscar socio o N°..."
                       value={searchCert}
                       onChange={(e) => setSearchCert(e.target.value)}
                       className="pl-8 text-sm h-9"
                     />
                   </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 text-xs gap-1.5 border-emerald-600/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-2xs"
+                    title="Abrir opciones de descarga por fechas"
+                    disabled={certificadosFiltrados.length === 0}
+                    onClick={() => {
+                      setModalFechaDesde(filtroFechaDesde);
+                      setModalFechaHasta(filtroFechaHasta || new Date().toISOString().split("T")[0]);
+                      setModalEstadoFiltro(filtroEstadoCert);
+                      setModalDescargaFechas(true);
+                    }}
+                  >
+                    <FileDown className="size-3.5 text-emerald-600" />
+                    <span>Descargar Fechas ({certificadosFiltrados.length})</span>
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -610,7 +831,7 @@ export default function AccionesPage() {
                       <TableHead className="text-center">Fecha Emisión</TableHead>
                       <TableHead className="text-center">Origen</TableHead>
                       <TableHead className="text-center">Estado</TableHead>
-                      <TableHead className="text-center w-20">Ver</TableHead>
+                      <TableHead className="text-center w-36">Descarga PDF</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -649,8 +870,8 @@ export default function AccionesPage() {
                           <TableCell className="text-right font-medium text-emerald-600 dark:text-emerald-400">
                             {formatMoneda(c.totalMonto)}
                           </TableCell>
-                          <TableCell className="text-center text-xs text-muted-foreground">
-                            {c.fechaEmision}
+                          <TableCell className="text-center text-xs font-mono text-muted-foreground">
+                            {empresa?.fechaFundacion || c.fechaEmision || "—"}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="text-[10px] uppercase font-mono">
@@ -674,13 +895,23 @@ export default function AccionesPage() {
                           </TableCell>
                           <TableCell className="text-center">
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              className="h-8 w-8 p-0"
-                              title="Ver Certificado Imprimible"
-                              onClick={() => setCertificadoSeleccionado(c)}
+                              className="h-8 px-2.5 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 font-medium shadow-sm"
+                              title="Descargar Certificado Oficial en PDF"
+                              onClick={() => {
+                                try {
+                                  descargarCertificadoPDF(c, directiva, empresa);
+                                  toast.success(
+                                    `Certificado CERT-${String(c.numeroCertificado).padStart(6, "0")} descargado en PDF`
+                                  );
+                                } catch (err: any) {
+                                  toast.error("Error al generar el PDF del certificado");
+                                }
+                              }}
                             >
-                              <Eye className="size-4 text-primary" />
+                              <FileDown className="size-3.5" />
+                              <span>Descargar PDF</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -974,105 +1205,148 @@ export default function AccionesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: Visualización de Certificado Formal (Diploma Imprimible) */}
-      <Dialog open={!!certificadoSeleccionado} onOpenChange={(open) => !open && setCertificadoSeleccionado(null)}>
-        <DialogContent className="max-w-2xl print:m-0 print:p-0 print:border-none print:shadow-none">
-          <DialogHeader className="print:hidden">
-            <DialogTitle className="flex items-center justify-between">
-              <span>Certificado de Aportación Nominativa</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => window.print()}
-              >
-                <Printer className="size-4" />
-                Imprimir
-              </Button>
+      {/* MODAL: Descargar Acciones por Fechas */}
+      <Dialog open={modalDescargaFechas} onOpenChange={setModalDescargaFechas}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Calendar className="size-5 text-emerald-600" />
+              Descargar Acciones por Rango de Fechas
             </DialogTitle>
+            <DialogDescription className="text-xs">
+              Seleccione el período de fechas de emisión y el formato de documento PDF que desea generar.
+            </DialogDescription>
           </DialogHeader>
 
-          {certificadoSeleccionado && (
-            <div className="border-4 border-double border-primary/40 bg-card p-6 md:p-8 rounded-lg shadow-sm text-center relative overflow-hidden my-2">
-              {/* Marca de Agua de Fondo */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-                <Building2 className="w-96 h-96" />
+          <div className="grid gap-4 py-3">
+            {/* Rango de Fechas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="modalDesde" className="text-xs font-semibold">
+                  Fecha Inicial (Desde)
+                </Label>
+                <Input
+                  id="modalDesde"
+                  type="date"
+                  value={modalFechaDesde}
+                  onChange={(e) => setModalFechaDesde(e.target.value)}
+                  className="text-xs h-9"
+                />
               </div>
 
-              {/* Sello de Título Cancelado / Devuelto */}
-              {certificadoSeleccionado.estado === "DEVUELTO_RETIRO" && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-22deg] border-4 border-rose-600/80 text-rose-600 px-6 py-2.5 rounded-lg font-bold text-2xl md:text-3xl tracking-widest uppercase pointer-events-none z-20 shadow-lg bg-rose-50/85 dark:bg-rose-950/85 backdrop-blur-[1px]">
-                  CANCELADO / DEVUELTO
-                </div>
-              )}
-
-              <div className="border-b-2 border-primary/20 pb-4 mb-6">
-                <h2 className="text-xl md:text-2xl font-serif font-bold tracking-wide text-foreground uppercase">
-                  Caja Comunal Emprende Chambala
-                </h2>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">
-                  Asociación Comunal de Ahorro y Crédito
-                </p>
-                <div className="mt-3 inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-mono font-bold tracking-wider">
-                  CERTIFICADO DE ACCIONES N° {certificadoSeleccionado.numeroCertificado.toString().padStart(6, "0")}
-                </div>
-              </div>
-
-              <p className="text-xs text-muted-foreground italic mb-4">
-                El presente título certifica que
-              </p>
-
-              <h3 className="text-xl md:text-2xl font-bold text-foreground font-serif border-b border-muted pb-2 mb-4 mx-8">
-                {certificadoSeleccionado.socioNombre}
-              </h3>
-
-              <p className="text-xs md:text-sm text-muted-foreground mb-4">
-                es titular legítimo de <span className="font-bold text-foreground">{certificadoSeleccionado.cantidad} ({certificadoSeleccionado.cantidad == 1 ? "UNA ACCIÓN" : `${certificadoSeleccionado.cantidad} ACCIONES`})</span> nominativas, de un valor nominal de <span className="font-semibold text-foreground">S/ {Number(certificadoSeleccionado.valorNominal).toFixed(2)} cada una</span>, que representan un capital social aportado de:
-              </p>
-
-              <div className="bg-muted/50 border border-primary/20 rounded-md py-3 px-6 my-4 inline-block">
-                <span className="text-2xl md:text-3xl font-bold font-mono text-primary">
-                  {formatMoneda(certificadoSeleccionado.totalMonto)}
-                </span>
-              </div>
-
-              <div className="my-4 text-xs font-mono bg-muted/30 p-2.5 rounded border inline-block">
-                Series Asignadas: <strong>#{certificadoSeleccionado.serieInicio}</strong> a la <strong>#{certificadoSeleccionado.serieFin}</strong>
-              </div>
-
-              <p className="text-[11px] text-muted-foreground mt-2 max-w-lg mx-auto">
-                Las presentes acciones otorgan a su titular todos los derechos corporativos, de voz, voto y derecho a utilidades conforme a los estatutos sociales de la Caja.
-              </p>
-
-              <div className="mt-12 pt-6 grid grid-cols-2 gap-8 text-center text-xs">
-                <div className="border-t border-foreground/30 pt-2">
-                  <div className="font-medium text-foreground">Presidente / Administrador</div>
-                  <div className="text-[10px] text-muted-foreground">Caja Comunal Chambala</div>
-                </div>
-                <div className="border-t border-foreground/30 pt-2">
-                  <div className="font-medium text-foreground">Tesorero General</div>
-                  <div className="text-[10px] text-muted-foreground">Caja Comunal Chambala</div>
-                </div>
-              </div>
-
-              <div className="mt-6 text-[10px] text-muted-foreground">
-                Fecha de Emisión: {certificadoSeleccionado.fechaEmision} &bull; Estado:{" "}
-                {certificadoSeleccionado.estado === "DEVUELTO_RETIRO" ? (
-                  <span className="font-semibold text-rose-600 dark:text-rose-400">
-                    CANCELADO / DEVUELTO A TESORERÍA POR RETIRO DE SOCIO
-                  </span>
-                ) : (
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    {certificadoSeleccionado.estado}
-                  </span>
-                )}
+              <div className="grid gap-1.5">
+                <Label htmlFor="modalHasta" className="text-xs font-semibold">
+                  Fecha Final (Hasta)
+                </Label>
+                <Input
+                  id="modalHasta"
+                  type="date"
+                  value={modalFechaHasta}
+                  onChange={(e) => setModalFechaHasta(e.target.value)}
+                  className="text-xs h-9"
+                />
               </div>
             </div>
-          )}
 
-          <DialogFooter className="print:hidden">
-            <Button variant="outline" onClick={() => setCertificadoSeleccionado(null)}>
-              Cerrar
+            {/* Filtro de Estado Opcional */}
+            <div className="grid gap-1.5">
+              <Label className="text-xs font-semibold">Filtro de Estado</Label>
+              <Select value={modalEstadoFiltro} onValueChange={setModalEstadoFiltro}>
+                <SelectTrigger className="text-xs h-9">
+                  <SelectValue placeholder="Estado de certificados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos los estados (Activos, Cancelados, etc.)</SelectItem>
+                  <SelectItem value="ACTIVO">Solo títulos Activos</SelectItem>
+                  <SelectItem value="DEVUELTO_RETIRO">Solo Cancelados / Devueltos por retiro</SelectItem>
+                  <SelectItem value="TRANSFERIDO">Solo Transferidos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Formato de Descarga */}
+            <div className="grid gap-2">
+              <Label className="text-xs font-semibold">Formato de Documento en PDF</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div
+                  onClick={() => setDescargaTipoModal("CERTIFICADOS")}
+                  className={cn(
+                    "cursor-pointer border-2 rounded-lg p-3 transition-all",
+                    descargaTipoModal === "CERTIFICADOS"
+                      ? "border-primary bg-primary/5 text-foreground shadow-2xs"
+                      : "border-border/60 hover:border-border text-muted-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-2 font-semibold text-xs text-foreground">
+                    <FileCheck className="size-4 text-primary" />
+                    <span>Certificados Oficiales</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Compilado de títulos nominativos individuales (diplomas estilo A4) listos para imprimir.
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => setDescargaTipoModal("PADRON")}
+                  className={cn(
+                    "cursor-pointer border-2 rounded-lg p-3 transition-all",
+                    descargaTipoModal === "PADRON"
+                      ? "border-primary bg-primary/5 text-foreground shadow-2xs"
+                      : "border-border/60 hover:border-border text-muted-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-2 font-semibold text-xs text-foreground">
+                    <FileText className="size-4 text-emerald-600" />
+                    <span>Libro / Padrón Oficial</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Reporte tabular con detalle de socios, cantidades, montos, series y firmas de directiva.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Resumen dinámico del rango */}
+            <div className="rounded-lg bg-muted/40 border border-border/60 p-3 text-xs">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Certificados encontrados:</span>
+                <strong className="text-foreground font-mono text-sm">
+                  {certificadosModal.length} títulos
+                </strong>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground mt-1">
+                <span>Total acciones en el rango:</span>
+                <strong className="text-foreground font-mono">
+                  {certificadosModal.reduce((sum, c) => sum + (c.cantidad || 0), 0).toLocaleString("es-PE")} acc.
+                </strong>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground mt-1">
+                <span>Capital total representado:</span>
+                <strong className="text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
+                  {formatMoneda(certificadosModal.reduce((sum, c) => sum + Number(c.totalMonto || 0), 0))}
+                </strong>
+              </div>
+
+              {certificadosModal.length === 0 && (
+                <p className="text-rose-500 text-xs mt-2 font-medium">
+                  ⚠️ No existen certificados registrados en el rango de fechas indicado.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setModalDescargaFechas(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDescargarModalFechas}
+              disabled={certificadosModal.length === 0}
+              className="gap-2 bg-primary text-primary-foreground shadow"
+            >
+              <FileDown className="size-4" />
+              Descargar {descargaTipoModal === "CERTIFICADOS" ? "Certificados" : "Padrón"} en PDF
             </Button>
           </DialogFooter>
         </DialogContent>

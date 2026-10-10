@@ -24,6 +24,8 @@ import {
   ShieldCheck,
   Landmark,
   Award,
+  UserCheck,
+  Building2,
 } from "lucide-react"
 
 // Cada punto de la Caja Comunal como elemento independiente en el menú
@@ -32,6 +34,11 @@ const navItems: NavMainItem[] = [
     title: "Panel Principal",
     url: "/dashboard/analytics",
     icon: <LayoutDashboard className="size-5 shrink-0" />,
+  },
+  {
+    title: "Datos de la Empresa",
+    url: "/admin/empresa",
+    icon: <Building2 className="size-5 shrink-0" />,
   },
   {
     title: "Padrón de Socios",
@@ -47,6 +54,11 @@ const navItems: NavMainItem[] = [
         url: "/admin/socios/detalle",
       },
     ],
+  },
+  {
+    title: "Junta Directiva",
+    url: "/admin/directiva",
+    icon: <UserCheck className="size-5 shrink-0" />,
   },
   {
     title: "Matrícula de Acciones",

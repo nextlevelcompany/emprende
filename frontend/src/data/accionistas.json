@@ -1,0 +1,98 @@
+[
+  {
+    "id": "acc-001",
+    "codigo": 1,
+    "nombreCompleto": "MORAN LAIME CIRILO",
+    "documentoNumero": "19842103",
+    "fechaIngreso": "2021-06-08",
+    "accionesFundacion": 10,
+    "capitalInicial": 300.00,
+    "rolFundacion": "Socio Fundador / Secretario Inicial",
+    "estado": "ACTIVO",
+    "observaciones": "Comunero fundador y directivo desde el acto de constitución."
+  },
+  {
+    "id": "acc-002",
+    "codigo": 2,
+    "nombreCompleto": "PONCE HUILCAYA ADELA",
+    "documentoNumero": "09812345",
+    "fechaIngreso": "2021-06-08",
+    "accionesFundacion": 15,
+    "capitalInicial": 450.00,
+    "rolFundacion": "Socia Fundadora / Presidenta Inicial",
+    "estado": "ACTIVO",
+    "observaciones": "Impulsora y primera Presidenta electa de la Caja Comunal."
+  },
+  {
+    "id": "acc-003",
+    "codigo": 3,
+    "nombreCompleto": "DE LA CRUZ GOMEZ VALENTIN",
+    "documentoNumero": "20194852",
+    "fechaIngreso": "2021-06-08",
+    "accionesFundacion": 8,
+    "capitalInicial": 240.00,
+    "rolFundacion": "Socio Fundador / Tesorero Inicial",
+    "estado": "ACTIVO",
+    "observaciones": "Gestor financiero y custodio de los primeros fondos de la UNICA."
+  },
+  {
+    "id": "acc-004",
+    "codigo": 4,
+    "nombreCompleto": "HUAYLINOS QUISPE MARCELINO",
+    "documentoNumero": "19940129",
+    "fechaIngreso": "2021-06-08",
+    "accionesFundacion": 6,
+    "capitalInicial": 180.00,
+    "rolFundacion": "Socio Fundador",
+    "estado": "ACTIVO",
+    "observaciones": "Productor agropecuario y aportante puntual en asambleas."
+  },
+  {
+    "id": "acc-005",
+    "codigo": 5,
+    "nombreCompleto": "QUISPE LAIME JUSTINA",
+    "documentoNumero": "20284711",
+    "fechaIngreso": "2021-06-08",
+    "accionesFundacion": 5,
+    "capitalInicial": 150.00,
+    "rolFundacion": "Socia Fundadora",
+    "estado": "ACTIVO",
+    "observaciones": "Emprendedora textil y socia activa con reinversión de utilidades."
+  },
+  {
+    "id": "acc-006",
+    "codigo": 6,
+    "nombreCompleto": "LAIME VILCACHA FORTUNATO",
+    "documentoNumero": "19830291",
+    "fechaIngreso": "2021-06-08",
+    "accionesFundacion": 10,
+    "capitalInicial": 300.00,
+    "rolFundacion": "Socio Fundador / Vocal Inicial",
+    "estado": "ACTIVO",
+    "observaciones": "Vocal de vigilancia en la primera directiva comunal."
+  },
+  {
+    "id": "acc-007",
+    "codigo": 7,
+    "nombreCompleto": "FLORES HUAMAN CARMEN ROSA",
+    "documentoNumero": "21049281",
+    "fechaIngreso": "2021-06-08",
+    "accionesFundacion": 7,
+    "capitalInicial": 210.00,
+    "rolFundacion": "Socia Fundadora",
+    "estado": "ACTIVO",
+    "observaciones": "Socia participante activa en asambleas de ahorro y crédito."
+  },
+  {
+    "id": "acc-008",
+    "codigo": 8,
+    "nombreCompleto": "MORAN LAIME ESTEBAN",
+    "documentoNumero": "19902341",
+    "fechaIngreso": "2021-06-08",
+    "accionesFundacion": 8,
+    "capitalInicial": 240.00,
+    "rolFundacion": "Socio Fundador",
+    "estado": "ACTIVO",
+    "observaciones": "Aportante fundador de capital de trabajo comunal."
+  }
+]
