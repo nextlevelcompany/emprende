@@ -3,7 +3,7 @@ import { getBackendUrl } from "./api-client";
 
 export async function fetchWithAuth(path: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
-  let accessToken = cookieStore.get("access_token")?.value;
+  const accessToken = cookieStore.get("access_token")?.value;
   const refreshToken = cookieStore.get("refresh_token")?.value;
 
   const headers = new Headers(options.headers || {});

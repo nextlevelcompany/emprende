@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import {
   Building2,
   Calendar,
@@ -12,7 +11,6 @@ import {
   Phone,
   Mail,
   MapPin,
-  Globe,
   Shield,
   Edit,
   Plus,
@@ -23,13 +21,9 @@ import {
   CheckCircle2,
   RefreshCw,
   Search,
-  Filter,
   FileCheck,
   Clock,
   BookOpen,
-  ArrowRight,
-  ExternalLink,
-  ChevronRight,
   Sparkles,
   Landmark,
   Image as ImageIcon,
@@ -43,7 +37,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -461,7 +454,7 @@ export default function EmpresaPage() {
             Datos de la Empresa y Registro Institucional
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Caja Comunal "Emprende Chambala" &bull; Perfil oficial, historial de fundación y libro de actas
+            Caja Comunal &quot;Emprende Chambala&quot; &bull; Perfil oficial, historial de fundación y libro de actas
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -992,7 +985,7 @@ export default function EmpresaPage() {
                 <div className="text-center py-12 text-muted-foreground border rounded-lg border-dashed">
                   <BookOpen className="h-10 w-10 mx-auto text-muted-foreground/60 mb-2" />
                   <p className="text-sm font-medium">No se encontraron actas con los criterios seleccionados</p>
-                  <p className="text-xs mt-1">Haga clic en "Registrar Nueva Reunión" para agregar un acta.</p>
+                  <p className="text-xs mt-1">Haga clic en &quot;Registrar Nueva Reuni&oacute;n&quot; para agregar un acta.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1088,7 +1081,7 @@ export default function EmpresaPage() {
                       {/* Resumen */}
                       {acta.resumen && (
                         <p className="text-xs text-muted-foreground italic">
-                          "{acta.resumen}"
+                          &ldquo;{acta.resumen}&rdquo;
                         </p>
                       )}
 
@@ -1135,7 +1128,7 @@ export default function EmpresaPage() {
                             </span>
                           ) : (
                             <span className="text-muted-foreground">
-                              Sin archivo digital adjunto (puede digitalizarlo en "Editar")
+                              Sin archivo digital adjunto (puede digitalizarlo en &quot;Editar&quot;)
                             </span>
                           )}
                         </div>

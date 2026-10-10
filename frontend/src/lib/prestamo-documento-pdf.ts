@@ -159,7 +159,6 @@ export function generarDocumentoPrestamoPDF(params: {
   const codigoSocio = socio?.codigo || prestamo.socioCodigo;
   const direccionSocio = socio?.direccion || fichaNotas?.direccion || "Comunidad de Chambala";
   const telefonoSocio = socio?.telefono || fichaNotas?.telefono || "—";
-  const emailSocio = socio?.email || fichaNotas?.email || "—";
   const ocupacionSocio = fichaNotas?.ocupacion || socio?.ocupacion || "Agricultor / Emprendedor";
   const estadoCivilSocio = fichaNotas?.estadoCivil || socio?.estadoCivil || "—";
   const edadSocio = fichaNotas?.edad || socio?.edad || "—";
@@ -564,7 +563,7 @@ export function generarDocumentoPrestamoPDF(params: {
   });
 
   // Resumen al pie de la tabla en la página 1
-  const finalYTable = (doc as any).lastAutoTable?.finalY || 180;
+  const finalYTable = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 180;
   doc.setFont("times", "italic");
   doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);

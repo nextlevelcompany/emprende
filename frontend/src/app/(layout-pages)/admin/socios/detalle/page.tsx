@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Users,
-  User,
   ArrowLeft,
   Calendar,
   Phone,
@@ -14,9 +13,7 @@ import {
   Shield,
   CreditCard,
   Coins,
-  TrendingUp,
   Receipt,
-  FileSpreadsheet,
   Printer,
   Search,
   CheckCircle2,
@@ -24,12 +21,10 @@ import {
   RefreshCw,
   Wallet,
   ArrowUpRight,
-  ArrowDownRight,
   PieChart as PieIcon,
   BarChart3,
   ExternalLink,
   Award,
-  DollarSign,
   ArrowDownCircle,
   ArrowUpCircle,
   Filter,
@@ -897,7 +892,7 @@ function DetalleSocioContent() {
 
                   {fichaDatos.documentos.length === 0 ? (
                     <div className="p-3 rounded border border-dashed bg-background/50 text-center text-xs text-muted-foreground">
-                      No hay archivos digitales adjuntos (copia de DNI o recibos). Puede digitalizarlos pulsando en "Subir archivo".
+                      No hay archivos digitales adjuntos (copia de DNI o recibos). Puede digitalizarlos pulsando en &quot;Subir archivo&quot;.
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

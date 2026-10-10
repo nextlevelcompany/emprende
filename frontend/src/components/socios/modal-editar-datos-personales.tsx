@@ -12,9 +12,6 @@ import {
   CheckCircle2,
   XCircle,
   FileCheck,
-  AlertCircle,
-  Info,
-  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -29,7 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -536,7 +532,7 @@ export function ModalEditarDatosPersonales({
                     No hay documentos digitales adjuntos
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Haz clic aquí o en "Adjuntar Archivo" para subir copia de DNI, recibo o constancias.
+                    Haz clic aquí o en &quot;Adjuntar Archivo&quot; para subir copia de DNI, recibo o constancias.
                   </p>
                 </div>
               ) : (
