@@ -1,9 +1,6 @@
 import React from "react";
+import SocioLayoutShell from "@/components/layout/socio-layout-shell";
 
 export default function SocioLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {children}
-    </div>
-  );
+  return <SocioLayoutShell>{children}</SocioLayoutShell>;
 }

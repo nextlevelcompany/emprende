@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-import { Airplay, ChartColumnDecreasing, Clock, Lightbulb, TrendingDown, TrendingUp, UserPlus, UserRoundX, Users, Wallet } from "lucide-react"
+import { Airplay, ChartColumnDecreasing, Clock, Lightbulb, TrendingDown, TrendingUp, UserPlus, UserRoundX, Wallet } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 
 export default function TopTrafficChannelsCard() {

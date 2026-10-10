@@ -1,4 +1,4 @@
-const xlsx = require('xlsx');
+import xlsx from 'xlsx';
 
 const filePath = 'c:\\Proyectos\\Emprende\\Datos Emprende\\Libro CAJA EMPRENDE CHAMBALA 2024 -2025 ACTUALIZADO (3).xls';
 const wb = xlsx.readFile(filePath);

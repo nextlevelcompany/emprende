@@ -1,5 +1,23 @@
 BEGIN;
 
+-- Salvaguarda: este archivo reemplaza detalles de utilidades de forma global.
+-- Habilita explícitamente la sesión solo después de validar destino y respaldo.
+-- SET app.allow_destructive_sync = 'true';
+DO $$
+DECLARE
+  caja_count integer;
+BEGIN
+  IF current_setting('app.allow_destructive_sync', true) IS DISTINCT FROM 'true' THEN
+    RAISE EXCEPTION 'Sincronización detenida: habilita app.allow_destructive_sync=true tras revisar el respaldo y el destino';
+  END IF;
+  SELECT count(*) INTO caja_count FROM caja;
+  IF caja_count <> 1 OR NOT EXISTS (
+    SELECT 1 FROM caja WHERE id = 'a0000000-0000-0000-0000-000000000001'
+  ) THEN
+    RAISE EXCEPTION 'Sincronización detenida: se esperaba únicamente la caja objetivo; encontradas % cajas', caja_count;
+  END IF;
+END $$;
+
 DELETE FROM distribucion_utilidad_detalle;
 
 -- 1. Distribución 2024

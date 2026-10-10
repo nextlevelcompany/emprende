@@ -17,6 +17,9 @@ public class DistribucionUtilidadDetalle {
     @JoinColumn(name = "distribucion_id", nullable = false)
     private DistribucionUtilidad distribucion;
 
+    @Column(name = "caja_id", nullable = false)
+    private UUID cajaId;
+
     @Column(nullable = false)
     private Integer acciones;
 
@@ -71,6 +74,7 @@ public class DistribucionUtilidadDetalle {
 
     public void asignarDistribucion(DistribucionUtilidad distribucion) {
         this.distribucion = distribucion;
+        this.cajaId = distribucion.getCajaId();
         if (this.id != null) {
             this.id.setDistribucionId(distribucion.getId());
         }

@@ -15,6 +15,8 @@ import com.cajachambala.prestamos.infrastructure.persistence.CuotaPrestamoReposi
 import com.cajachambala.prestamos.infrastructure.persistence.PrestamoRepository;
 import com.cajachambala.shared.infrastructure.security.UserContext;
 import com.cajachambala.shared.infrastructure.security.UserContextHolder;
+import com.cajachambala.shared.infrastructure.persistence.CorrelativoService;
+import com.cajachambala.shared.application.IdempotencyService;
 import com.cajachambala.socios.domain.Socio;
 import com.cajachambala.socios.infrastructure.persistence.SocioRepository;
 import org.springframework.data.domain.Page;
@@ -39,6 +41,8 @@ public class PrestamoService {
     private final ConceptoRepository conceptoRepository;
     private final OperacionRepository operacionRepository;
     private final AuditService auditService;
+    private final CorrelativoService correlativoService;
+    private final IdempotencyService idempotencyService;
 
     public PrestamoService(
             PrestamoRepository prestamoRepository,
@@ -47,7 +51,9 @@ public class PrestamoService {
             PeriodoRepository periodoRepository,
             ConceptoRepository conceptoRepository,
             OperacionRepository operacionRepository,
-            AuditService auditService
+            AuditService auditService,
+            CorrelativoService correlativoService,
+            IdempotencyService idempotencyService
     ) {
         this.prestamoRepository = prestamoRepository;
         this.cuotaPrestamoRepository = cuotaPrestamoRepository;
@@ -56,6 +62,8 @@ public class PrestamoService {
         this.conceptoRepository = conceptoRepository;
         this.operacionRepository = operacionRepository;
         this.auditService = auditService;
+        this.correlativoService = correlativoService;
+        this.idempotencyService = idempotencyService;
     }
 
     // ==========================================
@@ -158,7 +166,7 @@ public class PrestamoService {
         }
 
         BigDecimal tasa = req.tasaMensual() != null ? req.tasaMensual() : new BigDecimal("0.0500");
-        Integer proximoNumero = prestamoRepository.findMaxNumeroByCajaId(cajaId) + 1;
+        Integer proximoNumero = correlativoService.siguiente(cajaId, "PRESTAMO", prestamoRepository.findMaxNumeroByCajaId(cajaId) + 1);
 
         Prestamo prestamo = new Prestamo(
                 cajaId,
@@ -361,6 +369,19 @@ public class PrestamoService {
     public PrestamoDetalleResponse registrarPagoCuota(
             UUID prestamoId,
             UUID cuotaId,
+            RegistrarPagoCuotaRequest req,
+            String idempotencyKey
+    ) {
+        UUID cajaId = getCajaIdActual();
+        return idempotencyService.ejecutar(cajaId, "COBRO_CUOTA", idempotencyKey,
+                Map.of("prestamoId", prestamoId, "cuotaId", cuotaId, "request", req),
+                PrestamoDetalleResponse.class,
+                () -> registrarPagoCuotaInterno(prestamoId, cuotaId, req));
+    }
+
+    private PrestamoDetalleResponse registrarPagoCuotaInterno(
+            UUID prestamoId,
+            UUID cuotaId,
             RegistrarPagoCuotaRequest req
     ) {
         UUID cajaId = getCajaIdActual();
@@ -373,14 +394,14 @@ public class PrestamoService {
             throw new IllegalStateException("Solo se pueden cobrar cuotas de préstamos en estado VIGENTE (actual: " + prestamo.getEstado() + ")");
         }
 
-        CuotaPrestamo cuota = cuotaPrestamoRepository.findByIdAndPrestamoId(cuotaId, prestamoId)
+        CuotaPrestamo cuota = cuotaPrestamoRepository.findByIdAndPrestamoIdForUpdate(cuotaId, prestamoId)
                 .orElseThrow(() -> new IllegalArgumentException("Cuota no encontrada en este préstamo"));
 
         if (cuota.getEstado() == CuotaEstado.PAGADA) {
             throw new IllegalStateException("La cuota #" + cuota.getNroCuota() + " ya está completamente pagada");
         }
 
-        Periodo periodo = periodoRepository.findByIdAndCajaId(req.periodoId(), cajaId)
+        Periodo periodo = periodoRepository.findByIdAndCajaIdForUpdate(req.periodoId(), cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Periodo contable no encontrado"));
 
         if (periodo.getEstado() == PeriodoEstado.CERRADO) {
@@ -415,7 +436,7 @@ public class PrestamoService {
         Concepto conceptoInteres = conceptoRepository.findByCodigo("INTERES_RECIBIDO")
                 .orElseThrow(() -> new IllegalStateException("Concepto 'INTERES_RECIBIDO' no encontrado"));
 
-        Integer nroRecibo = operacionRepository.findMaxNroReciboByCajaId(cajaId) + 1;
+        Integer nroRecibo = correlativoService.siguiente(cajaId, "RECIBO", operacionRepository.findMaxNroReciboByCajaId(cajaId) + 1);
 
         String descripcion = "Cobro cuota " + cuota.getNroCuota() + "/" + guardado.getNroCuotas() +
                 " Préstamo #" + guardado.getNumero() + " - " + socio.getNombreCompleto();
@@ -499,6 +520,12 @@ public class PrestamoService {
         Prestamo prestamo = prestamoRepository.findByIdAndCajaId(prestamoId, cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Préstamo no encontrado"));
 
+        UserContext context = UserContextHolder.getContext();
+        if (context != null && "SOCIO".equalsIgnoreCase(context.role())
+                && (context.socioId() == null || !context.socioId().equals(prestamo.getSocioId()))) {
+            throw new org.springframework.security.access.AccessDeniedException("Solo puedes consultar tus propios préstamos");
+        }
+
         Socio socio = socioRepository.findByIdAndCajaId(prestamo.getSocioId(), cajaId).orElse(null);
         return toPrestamoDetalleResponse(prestamo, socio);
     }
@@ -506,13 +533,21 @@ public class PrestamoService {
     @Transactional(readOnly = true)
     public Page<PrestamoResponse> listar(UUID socioId, PrestamoEstado estado, Pageable pageable) {
         UUID cajaId = getCajaIdActual();
+        UserContext context = UserContextHolder.getContext();
+        if (context != null && "SOCIO".equalsIgnoreCase(context.role())) {
+            if (context.socioId() == null) {
+                throw new org.springframework.security.access.AccessDeniedException("La cuenta no está asociada a un socio");
+            }
+            socioId = context.socioId();
+        }
+        final UUID socioFiltro = socioId;
 
         Specification<Prestamo> spec = (root, query, cb) -> {
             var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
             predicates.add(cb.equal(root.get("cajaId"), cajaId));
 
-            if (socioId != null) {
-                predicates.add(cb.equal(root.get("socioId"), socioId));
+            if (socioFiltro != null) {
+                predicates.add(cb.equal(root.get("socioId"), socioFiltro));
             }
             if (estado != null) {
                 predicates.add(cb.equal(root.get("estado"), estado));

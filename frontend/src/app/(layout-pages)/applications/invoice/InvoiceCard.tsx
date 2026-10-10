@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import {
   Card,
@@ -24,7 +25,7 @@ export default function InvoiceCard() {
 
           {/* Logo */}
           <div className="text-3xl font-bold">
-            <img src="https://codervent.com/reactboard/images/icons/amazon.png" alt="Company Logo" className="h-12 w-auto" />
+            <Image unoptimized height={480} width={640} src="https://codervent.com/reactboard/images/icons/amazon.png" alt="Company Logo" className="h-12 w-auto" />
           </div>
         </div>
         <div className="grid gap-6 md:grid-cols-2">

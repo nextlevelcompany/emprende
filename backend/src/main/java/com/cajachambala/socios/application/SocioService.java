@@ -14,6 +14,7 @@ import com.cajachambala.socios.domain.SocioTipo;
 import com.cajachambala.socios.infrastructure.persistence.SocioRepository;
 import com.cajachambala.shared.infrastructure.security.UserContext;
 import com.cajachambala.shared.infrastructure.security.UserContextHolder;
+import com.cajachambala.shared.infrastructure.persistence.CorrelativoService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,19 +33,22 @@ public class SocioService {
     private final AesGcmCryptoService cryptoService;
     private final PasswordService passwordService;
     private final AuditService auditService;
+    private final CorrelativoService correlativoService;
 
     public SocioService(
             SocioRepository socioRepository,
             AppUserRepository appUserRepository,
             AesGcmCryptoService cryptoService,
             PasswordService passwordService,
-            AuditService auditService
+            AuditService auditService,
+            CorrelativoService correlativoService
     ) {
         this.socioRepository = socioRepository;
         this.appUserRepository = appUserRepository;
         this.cryptoService = cryptoService;
         this.passwordService = passwordService;
         this.auditService = auditService;
+        this.correlativoService = correlativoService;
     }
 
     @Transactional
@@ -60,7 +64,7 @@ public class SocioService {
         }
 
         byte[] docEnc = cryptoService.encryptString(rawDoc);
-        Integer nextCodigo = socioRepository.findMaxCodigoByCajaId(cajaId) + 1;
+        Integer nextCodigo = correlativoService.siguiente(cajaId, "SOCIO", socioRepository.findMaxCodigoByCajaId(cajaId) + 1);
 
         Socio socio = new Socio(
                 cajaId,
@@ -219,9 +223,10 @@ public class SocioService {
             throw new IllegalArgumentException("El correo ya está en uso por otra cuenta");
         }
 
-        String password = (req.passwordTemporal() != null && !req.passwordTemporal().isBlank())
-                ? req.passwordTemporal().trim()
-                : "Socio" + socio.getCodigo() + "#Chambala2026";
+        if (req.passwordTemporal() == null || req.passwordTemporal().isBlank()) {
+            throw new IllegalArgumentException("Debe proporcionar una contraseña temporal segura");
+        }
+        String password = req.passwordTemporal().trim();
 
         passwordService.validatePasswordStrength(password, rawEmail);
         String hash = passwordService.encode(password);

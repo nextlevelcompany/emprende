@@ -2,8 +2,11 @@ package com.cajachambala.identidad.application;
 
 import com.cajachambala.identidad.application.dto.AuthDtos.*;
 import com.cajachambala.identidad.domain.AppUser;
+import com.cajachambala.identidad.domain.OneTimeToken;
+import com.cajachambala.identidad.domain.TokenProposito;
 import com.cajachambala.identidad.infrastructure.audit.AuditService;
 import com.cajachambala.identidad.infrastructure.persistence.AppUserRepository;
+import com.cajachambala.identidad.infrastructure.persistence.OneTimeTokenRepository;
 import com.cajachambala.identidad.infrastructure.security.AesGcmCryptoService;
 import com.cajachambala.identidad.infrastructure.security.JwtService;
 import com.cajachambala.identidad.infrastructure.security.RefreshTokenService;
@@ -25,6 +28,8 @@ public class VerifyMfaUseCase {
     private final TotpService totpService;
     private final RefreshTokenService refreshTokenService;
     private final AuditService auditService;
+    private final OneTimeTokenRepository oneTimeTokenRepository;
+    private final FailedLoginRecorder failedLoginRecorder;
 
     public VerifyMfaUseCase(
             AppUserRepository appUserRepository,
@@ -32,7 +37,9 @@ public class VerifyMfaUseCase {
             AesGcmCryptoService aesGcmCryptoService,
             TotpService totpService,
             RefreshTokenService refreshTokenService,
-            AuditService auditService
+            AuditService auditService,
+            OneTimeTokenRepository oneTimeTokenRepository,
+            FailedLoginRecorder failedLoginRecorder
     ) {
         this.appUserRepository = appUserRepository;
         this.jwtService = jwtService;
@@ -40,9 +47,11 @@ public class VerifyMfaUseCase {
         this.totpService = totpService;
         this.refreshTokenService = refreshTokenService;
         this.auditService = auditService;
+        this.oneTimeTokenRepository = oneTimeTokenRepository;
+        this.failedLoginRecorder = failedLoginRecorder;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = BadCredentialsException.class)
     public LoginResponse execute(VerifyMfaRequest request, HttpServletRequest httpRequest) {
         if (request == null || request.mfaToken() == null || request.code() == null) {
             throw new BadCredentialsException("Código de autenticación ausente");
@@ -61,6 +70,19 @@ public class VerifyMfaUseCase {
             throw new BadCredentialsException("Token MFA inválido o caducado");
         }
 
+        if (!user.isAuthenticationAllowed()) {
+            throw new BadCredentialsException("La cuenta no puede autenticarse");
+        }
+        String challengeHash = refreshTokenService.hashToken(claims.getId() == null ? "" : claims.getId());
+        OneTimeToken challenge = oneTimeTokenRepository
+                .findByTokenHashAndPropositoForUpdate(challengeHash, TokenProposito.MFA_CHALLENGE)
+                .orElseThrow(() -> new BadCredentialsException("Desafío MFA ya utilizado o inválido"));
+        if (!challenge.getUserId().equals(userId) || !challenge.isValid()) {
+            throw new BadCredentialsException("Desafío MFA ya utilizado o inválido");
+        }
+        challenge.markAsUsed();
+        oneTimeTokenRepository.save(challenge);
+
         if (!user.isMfaEnabled() || user.getMfaSecretEnc() == null) {
             throw new IllegalStateException("El usuario no tiene MFA habilitado");
         }
@@ -78,6 +100,7 @@ public class VerifyMfaUseCase {
         }
 
         if (!codeMatches) {
+            failedLoginRecorder.record(user.getId());
             auditService.logSecurityEvent(user.getCajaId(), user.getId(), user.getRole(), "MFA_VERIFY_FAILED", "Código TOTP inválido", httpRequest);
             throw new BadCredentialsException("Código de verificación incorrecto");
         }

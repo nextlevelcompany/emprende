@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -29,11 +29,11 @@ const initialState = {
 
 export default function LayoutStudent() {
   const [form, setForm] = useState(initialState)
-  const [errors, setErrors] = useState<any>({})
-  const [touched, setTouched] = useState<any>({})
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
+  const [touched, setTouched] = useState<Record<string, boolean | undefined>>({})
 
   const validate = () => {
-    const newErrors: any = {}
+    const newErrors: Partial<Record<keyof typeof initialState, string>> = {}
 
     if (!form.firstName) newErrors.firstName = "First name is required"
     if (!form.lastName) newErrors.lastName = "Last name is required"
@@ -54,16 +54,16 @@ export default function LayoutStudent() {
     return newErrors
   }
 
-  const handleChange = (name: string, value: any) => {
-    setForm((prev) => ({ ...prev, [name]: value }))
+  const handleChange = (name: string, value: string | boolean) => {
+    setForm((prev) => ({ ...prev, [name]: value } as typeof initialState))
   }
 
   const handleBlur = (name: string) => {
-    setTouched((prev: any) => ({ ...prev, [name]: true }))
+    setTouched((prev: Record<string, boolean | undefined>) => ({ ...prev, [name]: true }))
     setErrors(validate())
   }
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     const validationErrors = validate()
@@ -120,7 +120,7 @@ export default function LayoutStudent() {
                         ? "first"
                         : "last"
                     } name`}
-                    value={(form as any)[field]}
+                    value={String(form[field as keyof typeof initialState])}
                     onChange={(e) =>
                       handleChange(field, e.target.value)
                     }

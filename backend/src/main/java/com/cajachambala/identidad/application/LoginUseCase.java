@@ -3,8 +3,11 @@ package com.cajachambala.identidad.application;
 import com.cajachambala.identidad.application.dto.AuthDtos.*;
 import com.cajachambala.identidad.domain.AppUser;
 import com.cajachambala.identidad.domain.UserRole;
+import com.cajachambala.identidad.domain.OneTimeToken;
+import com.cajachambala.identidad.domain.TokenProposito;
 import com.cajachambala.identidad.infrastructure.audit.AuditService;
 import com.cajachambala.identidad.infrastructure.persistence.AppUserRepository;
+import com.cajachambala.identidad.infrastructure.persistence.OneTimeTokenRepository;
 import com.cajachambala.identidad.infrastructure.security.JwtService;
 import com.cajachambala.identidad.infrastructure.security.PasswordService;
 import com.cajachambala.identidad.infrastructure.security.RefreshTokenService;
@@ -14,7 +17,6 @@ import org.springframework.security.authentication.LockedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.util.Optional;
 
 @Service
@@ -25,24 +27,27 @@ public class LoginUseCase {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final AuditService auditService;
+    private final FailedLoginRecorder failedLoginRecorder;
+    private final OneTimeTokenRepository oneTimeTokenRepository;
 
     // Dummy hash para mitigar timing attacks si el usuario no existe
     private static final String DUMMY_HASH = "$argon2id$v=19$m=65536,t=3,p=1$c29tZXNhbHQxNmJ5dGVz$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    private static final int MAX_FAILED_ATTEMPTS = 5;
-    private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
-
     public LoginUseCase(
             AppUserRepository appUserRepository,
             PasswordService passwordService,
             JwtService jwtService,
             RefreshTokenService refreshTokenService,
-            AuditService auditService
+            AuditService auditService,
+            FailedLoginRecorder failedLoginRecorder,
+            OneTimeTokenRepository oneTimeTokenRepository
     ) {
         this.appUserRepository = appUserRepository;
         this.passwordService = passwordService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.auditService = auditService;
+        this.failedLoginRecorder = failedLoginRecorder;
+        this.oneTimeTokenRepository = oneTimeTokenRepository;
     }
 
     @Transactional
@@ -62,7 +67,7 @@ public class LoginUseCase {
 
         AppUser user = userOpt.get();
 
-        if (user.isAccountLocked()) {
+        if (!user.isAuthenticationAllowed()) {
             auditService.logSecurityEvent(user.getCajaId(), user.getId(), user.getRole(), "LOGIN_BLOCKED", "Cuenta temporalmente bloqueada", httpRequest);
             throw new LockedException("Tu cuenta se encuentra temporalmente bloqueada por reiterados intentos fallidos. Intenta más tarde.");
         }
@@ -76,15 +81,19 @@ public class LoginUseCase {
 
         boolean passwordValid = passwordService.matches(request.password(), user.getPasswordHash());
         if (!passwordValid) {
-            user.recordFailedLogin(MAX_FAILED_ATTEMPTS, LOCK_DURATION);
-            appUserRepository.save(user);
-            auditService.logSecurityEvent(user.getCajaId(), user.getId(), user.getRole(), "LOGIN_FAILED", "Contraseña incorrecta. Intento #" + user.getFailedLoginCount(), httpRequest);
+            short count = failedLoginRecorder.record(user.getId());
+            auditService.logSecurityEvent(user.getCajaId(), user.getId(), user.getRole(), "LOGIN_FAILED", "Contraseña incorrecta. Intento #" + count, httpRequest);
             throw new BadCredentialsException("Credenciales no válidas");
         }
 
         // Si el usuario requiere MFA (o tiene MFA activado)
         if (user.isMfaEnabled()) {
+            oneTimeTokenRepository.deleteByPropositoAndExpiresAtBefore(TokenProposito.MFA_CHALLENGE, java.time.Instant.now());
             String mfaToken = jwtService.generateMfaToken(user);
+            var claims = jwtService.extractClaims(mfaToken);
+            String challengeHash = refreshTokenService.hashToken(claims.getId());
+            oneTimeTokenRepository.save(OneTimeToken.create(user.getId(), TokenProposito.MFA_CHALLENGE,
+                    challengeHash, claims.getExpiration().toInstant()));
             auditService.logSecurityEvent(user.getCajaId(), user.getId(), user.getRole(), "LOGIN_MFA_CHALLENGE", "Solicitud de token TOTP", httpRequest);
             return new LoginResponse(true, mfaToken, null, null, null);
         }
@@ -113,7 +122,15 @@ public class LoginUseCase {
                 user.getStatus(),
                 user.getSocioId(),
                 user.isMustChangePassword(),
-                user.isMfaEnabled()
+                user.isMfaEnabled(),
+                user.getDisplayName(),
+                user.getPhone(),
+                user.getLocale(),
+                user.isNotificationsEnabled(),
+                user.getPasswordChangedAt(),
+                user.getCreatedAt(),
+                user.getLastLoginAt(),
+                user.getPendingEmail()
         );
     }
 }

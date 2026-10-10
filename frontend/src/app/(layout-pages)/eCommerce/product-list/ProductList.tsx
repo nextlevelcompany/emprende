@@ -1,5 +1,6 @@
 "use client"
-import { useMemo, useState, useEffect } from "react"
+import Image from "next/image"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import {
   Card,
@@ -217,17 +218,10 @@ export default function ProductList() {
   const PAGE_SIZE = 5
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))
 
-  useEffect(() => {
-    setPage((p) => Math.min(p, totalPages))
-  }, [totalPages])
-
-  const paginatedProducts = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const currentPage = Math.min(page, totalPages)
+  const paginatedProducts = filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   // ☑️ All selected logic
-  const allSelected =
-    paginatedProducts.length > 0 &&
-    selected.length === paginatedProducts.length
-
     
   return (
     <div className="space-y-6">
@@ -398,7 +392,7 @@ export default function ProductList() {
 
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <img
+                        <Image unoptimized height={480} width={640}
                           src={product.image}
                           alt={product.name}
                           className="h-10 w-10 rounded-full border object-cover p-1 bg-muted/50"

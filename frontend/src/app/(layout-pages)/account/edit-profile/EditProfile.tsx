@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -30,8 +31,9 @@ export default function EditProfile() {
           <TabsContent value="profile" className="space-y-6">
 
             <div className="flex items-center gap-6 flex-wrap">
-              <img
+              <Image unoptimized height={480} width={640}
                 src="https://randomuser.me/api/portraits/men/32.jpg"
+                alt="Profile preview"
                 className="w-28 h-28 rounded-full shadow-md"
               />
               <div>

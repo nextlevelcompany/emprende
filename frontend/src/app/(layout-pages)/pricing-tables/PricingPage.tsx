@@ -10,8 +10,7 @@ import {
 } from "@/components/ui/toggle-group"
 
 export default function PricingPage() {
-  
-  const [billing, setBilling] = useState("yearly")
+  const [, setBilling] = useState("yearly")
 
   return (
     <div className="max-w-7xl mx-auto py-16 px-2">

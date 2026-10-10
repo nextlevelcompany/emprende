@@ -1,13 +1,11 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Calendar,
-  CheckCircle2,
-  Clock,
   AlertCircle,
   Coins,
   DollarSign,
@@ -15,8 +13,6 @@ import {
   RefreshCw,
   Send,
   ShieldCheck,
-  FileText,
-  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatFecha } from "@/lib/utils";
@@ -134,8 +130,8 @@ export default function DistribucionDetallePage() {
           setPagoPeriodoId(abierto.id);
         }
       }
-    } catch (e: any) {
-      toast.error(e.message || "Error al cargar datos");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Error al cargar datos"));
     } finally {
       setLoading(false);
     }
@@ -158,8 +154,8 @@ export default function DistribucionDetallePage() {
       }
       toast.success("Distribución ratificada y aprobada oficialmente");
       cargarDatos();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Ocurrió un error"));
     } finally {
       setProcesando(false);
     }
@@ -190,8 +186,8 @@ export default function DistribucionDetallePage() {
       toast.success("Utilidades pagadas y asentadas en el Libro de Caja");
       setModalPagar(false);
       cargarDatos();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Ocurrió un error"));
     } finally {
       setProcesando(false);
     }

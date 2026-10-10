@@ -4,7 +4,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectSeparator,
 } from "@/components/ui/select"
 
 export function SelectBasic() {

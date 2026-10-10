@@ -1,28 +1,12 @@
-const xlsx = require('xlsx');
+import xlsx from 'xlsx';
 
 const filePath = 'c:\\Proyectos\\Emprende\\Datos Emprende\\Libro CAJA EMPRENDE CHAMBALA 2024 -2025 ACTUALIZADO (3).xls';
 const wb = xlsx.readFile(filePath);
-
-const MESES_MAP = {
-  'ENERO': 1, 'ENE': 1,
-  'FEBRERO': 2, 'FEB': 2,
-  'MARZO': 3, 'MAR': 3,
-  'ABRIL': 4, 'ABR': 4,
-  'MAYO': 5, 'MAY': 5,
-  'JUNIO': 6, 'JUN': 6,
-  'JULIO': 7, 'JUL': 7,
-  'AGOSTO': 8, 'AGO': 8,
-  'SEPTIEMBRE': 9, 'SETIEMBRE': 9, 'SEPTIEMBR': 9, 'SET': 9,
-  'OCTUBRE': 10, 'OCT': 10,
-  'NOVIEMBRE': 11, 'NOV': 11,
-  'DICIEMBRE': 12, 'DIC': 12
-};
 
 const results = [];
 
 wb.SheetNames.forEach(sheetName => {
   if (sheetName.includes('CALCULO PRESTAMOS')) return;
-  const sUpper = sheetName.trim().toUpperCase();
 
   // Determine year and month from sheet name or header
   const ws = wb.Sheets[sheetName];
@@ -42,8 +26,6 @@ wb.SheetNames.forEach(sheetName => {
   // Find totals
   let totIng = 0;
   let totEg = 0;
-  let saldoAnt = 0;
-  let saldoFin = 0;
 
   for (let r = 0; r < rows.length; r++) {
     const row = rows[r] || [];

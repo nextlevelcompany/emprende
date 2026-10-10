@@ -3,6 +3,7 @@ package com.cajachambala.prestamos.infrastructure.persistence;
 import com.cajachambala.prestamos.domain.CuotaEstado;
 import com.cajachambala.prestamos.domain.CuotaPrestamo;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,6 +19,10 @@ public interface CuotaPrestamoRepository extends JpaRepository<CuotaPrestamo, UU
     List<CuotaPrestamo> findByPrestamoIdOrderByNroCuotaAsc(UUID prestamoId);
 
     Optional<CuotaPrestamo> findByIdAndPrestamoId(UUID id, UUID prestamoId);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from CuotaPrestamo c where c.id = :id and c.prestamo.id = :prestamoId")
+    Optional<CuotaPrestamo> findByIdAndPrestamoIdForUpdate(@Param("id") UUID id, @Param("prestamoId") UUID prestamoId);
 
     Optional<CuotaPrestamo> findByPrestamoIdAndNroCuota(UUID prestamoId, Short nroCuota);
 

@@ -48,14 +48,14 @@ public class RefreshTokenService {
         return new TokenPair(rawToken, saved);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = BadCredentialsException.class)
     public RotationResult rotate(String rawRefreshToken, String ip, String userAgent) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
             throw new BadCredentialsException("Token de actualización ausente");
         }
 
         String tokenHash = hashToken(rawRefreshToken.trim());
-        RefreshToken existing = refreshTokenRepository.findByTokenHash(tokenHash)
+        RefreshToken existing = refreshTokenRepository.findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(() -> new BadCredentialsException("Token de actualización no reconocido"));
 
         // Detección de reuso de token comprometido
@@ -71,7 +71,7 @@ public class RefreshTokenService {
         AppUser user = appUserRepository.findById(existing.getUserId())
                 .orElseThrow(() -> new BadCredentialsException("Usuario no encontrado"));
 
-        if (user.isAccountLocked()) {
+        if (!user.isAuthenticationAllowed()) {
             throw new BadCredentialsException("La cuenta del usuario se encuentra bloqueada");
         }
 

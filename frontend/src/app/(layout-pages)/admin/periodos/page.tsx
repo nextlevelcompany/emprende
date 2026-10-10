@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
@@ -15,7 +16,6 @@ import {
   Wallet,
   ArrowRight,
   AlertTriangle,
-  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatFecha, formatSoles } from "@/lib/utils";
@@ -112,8 +112,8 @@ export default function PeriodosPage() {
       if (!res.ok) throw new Error("Error al obtener periodos");
       const data = await res.json();
       setPeriodos(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      toast.error(err.message || "Error al conectar con el servidor");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al conectar con el servidor"));
     } finally {
       setLoading(false);
     }
@@ -156,8 +156,8 @@ export default function PeriodosPage() {
       toast.success(`Periodo ${MESES[data.mes - 1]} ${data.anio} aperturado con éxito`);
       setModalCrear(false);
       cargarPeriodos();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setProcesando(false);
     }
@@ -183,8 +183,8 @@ export default function PeriodosPage() {
       setModalReabrir(null);
       setMotivoReapertura("");
       cargarPeriodos();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setProcesando(false);
     }

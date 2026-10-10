@@ -109,6 +109,7 @@ public class DistribucionUtilidadService {
         BigDecimal utilidad = req.utilidadTotal().setScale(2, RoundingMode.HALF_UP);
 
         Map<UUID, Integer> mapaAcciones = obtenerOMapearAcciones(cajaId, req.sociosManuales());
+        validarSociosDistribucion(cajaId, mapaAcciones);
         int totalAcciones = mapaAcciones.values().stream().mapToInt(Integer::intValue).sum();
 
         if (totalAcciones <= 0) {
@@ -161,8 +162,20 @@ public class DistribucionUtilidadService {
             throw new IllegalStateException("El ejercicio " + req.ejercicio() + " ya cuenta con una distribución en estado " + existente.get().getEstado());
         }
 
-        Map<UUID, Integer> mapaAcciones = req.socios().stream()
-                .collect(Collectors.toMap(SocioAccionesInput::socioId, SocioAccionesInput::acciones));
+        if (req.socios() == null || req.socios().isEmpty()) {
+            throw new IllegalArgumentException("Debe asignar acciones a al menos un socio");
+        }
+        Map<UUID, Integer> mapaAcciones = new LinkedHashMap<>();
+        for (SocioAccionesInput item : req.socios()) {
+            if (item == null || item.socioId() == null || item.acciones() == null) {
+                throw new IllegalArgumentException("Cada socio debe incluir su identificador y cantidad de acciones");
+            }
+            if (mapaAcciones.putIfAbsent(item.socioId(), item.acciones()) != null) {
+                throw new IllegalArgumentException("No se puede incluir al mismo socio más de una vez");
+            }
+        }
+
+        validarSociosDistribucion(cajaId, mapaAcciones);
 
         int totalAcciones = mapaAcciones.values().stream().mapToInt(Integer::intValue).sum();
         if (totalAcciones <= 0) {
@@ -230,7 +243,7 @@ public class DistribucionUtilidadService {
         UUID cajaId = getCajaIdActual();
         UUID userId = getUserIdActual();
 
-        DistribucionUtilidad dist = distribucionRepository.findByIdAndCajaId(id, cajaId)
+        DistribucionUtilidad dist = distribucionRepository.findByIdAndCajaIdForUpdate(id, cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Distribución no encontrada"));
 
         dist.aprobar(userId);
@@ -259,14 +272,14 @@ public class DistribucionUtilidadService {
         UUID cajaId = getCajaIdActual();
         UUID userId = getUserIdActual();
 
-        DistribucionUtilidad dist = distribucionRepository.findByIdAndCajaId(id, cajaId)
+        DistribucionUtilidad dist = distribucionRepository.findByIdAndCajaIdForUpdate(id, cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Distribución no encontrada"));
 
         if (dist.getEstado() != DistribucionEstado.APROBADA) {
             throw new IllegalStateException("La distribución debe estar en estado APROBADA para poder registrar los pagos");
         }
 
-        Periodo periodo = periodoRepository.findByIdAndCajaId(req.periodoId(), cajaId)
+        Periodo periodo = periodoRepository.findByIdAndCajaIdForUpdate(req.periodoId(), cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Periodo contable no encontrado"));
 
         if (periodo.getEstado() == PeriodoEstado.CERRADO) {
@@ -345,6 +358,22 @@ public class DistribucionUtilidadService {
     }
 
     @Transactional(readOnly = true)
+    public DetalleDistribucionResponse obtenerMiDetalle(UUID id) {
+        UserContext context = UserContextHolder.getContext();
+        if (context == null || !"SOCIO".equalsIgnoreCase(context.role()) || context.socioId() == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Se requiere una cuenta de socio");
+        }
+        UUID cajaId = context.cajaId();
+        DistribucionUtilidad dist = distribucionRepository.findByIdAndCajaId(id, cajaId)
+                .orElseThrow(() -> new IllegalArgumentException("Distribución no encontrada"));
+        Map<UUID, Socio> sociosMap = cargarSociosMap(dist);
+        return toDistribucionResponse(dist, sociosMap).detalles().stream()
+                .filter(detalle -> context.socioId().equals(detalle.socioId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No existe participación para este socio en la distribución"));
+    }
+
+    @Transactional(readOnly = true)
     public List<DistribucionResponse> listar() {
         UUID cajaId = getCajaIdActual();
         List<DistribucionUtilidad> lista = distribucionRepository.findByCajaIdOrderByEjercicioDesc(cajaId);
@@ -361,18 +390,37 @@ public class DistribucionUtilidadService {
 
     private Map<UUID, Integer> obtenerOMapearAcciones(UUID cajaId, List<SocioAccionesInput> manuales) {
         if (manuales != null && !manuales.isEmpty()) {
-            return manuales.stream()
-                    .filter(s -> s.acciones() > 0)
-                    .collect(Collectors.toMap(SocioAccionesInput::socioId, SocioAccionesInput::acciones));
+            Map<UUID, Integer> result = new LinkedHashMap<>();
+            for (SocioAccionesInput item : manuales) {
+                if (item == null || item.socioId() == null || item.acciones() == null || item.acciones() <= 0) {
+                    throw new IllegalArgumentException("Cada socio debe tener una cantidad positiva de acciones");
+                }
+                if (result.putIfAbsent(item.socioId(), item.acciones()) != null) {
+                    throw new IllegalArgumentException("No se puede incluir al mismo socio más de una vez");
+                }
+            }
+            return result;
         }
 
         // Asignación equitativa por defecto entre socios activos (ej: 10 acciones cada uno)
-        List<Socio> socios = socioRepository.findByCajaIdAndEstadoAndDeletedAtIsNullOrderByCodigoAsc(cajaId, SocioEstado.ACTIVO);
+        List<Socio> socios = socioRepository.findByCajaIdAndDeletedAtIsNullOrderByCodigoAsc(cajaId);
         Map<UUID, Integer> map = new LinkedHashMap<>();
         for (Socio s : socios) {
             map.put(s.getId(), 10);
         }
         return map;
+    }
+
+    private void validarSociosDistribucion(UUID cajaId, Map<UUID, Integer> accionesPorSocio) {
+        if (accionesPorSocio.isEmpty() || accionesPorSocio.entrySet().stream()
+                .anyMatch(entry -> entry.getKey() == null || entry.getValue() == null || entry.getValue() <= 0)) {
+            throw new IllegalArgumentException("Cada socio debe tener una cantidad positiva de acciones");
+        }
+        List<Socio> socios = socioRepository.findByCajaIdAndEstadoAndDeletedAtIsNullOrderByCodigoAsc(cajaId, SocioEstado.ACTIVO);
+        Set<UUID> sociosActivos = socios.stream().map(Socio::getId).collect(Collectors.toSet());
+        if (!sociosActivos.containsAll(accionesPorSocio.keySet())) {
+            throw new IllegalArgumentException("La distribución incluye socios inexistentes, eliminados o de otra caja");
+        }
     }
 
     private List<DetalleDistribucionResponse> calcularRenglonesConAjuste(

@@ -10,6 +10,7 @@ import com.cajachambala.identidad.infrastructure.audit.AuditService;
 import com.cajachambala.identidad.infrastructure.security.AesGcmCryptoService;
 import com.cajachambala.shared.infrastructure.security.UserContext;
 import com.cajachambala.shared.infrastructure.security.UserContextHolder;
+import com.cajachambala.shared.infrastructure.persistence.CorrelativoService;
 import com.cajachambala.socios.domain.Socio;
 import com.cajachambala.socios.infrastructure.persistence.SocioRepository;
 import org.springframework.stereotype.Service;
@@ -28,19 +29,22 @@ public class AccionService {
     private final SocioRepository socioRepository;
     private final AuditService auditService;
     private final AesGcmCryptoService cryptoService;
+    private final CorrelativoService correlativoService;
 
     public AccionService(
             CertificadoAccionRepository certificadoRepository,
             TransferenciaAccionRepository transferenciaRepository,
             SocioRepository socioRepository,
             AuditService auditService,
-            AesGcmCryptoService cryptoService
+            AesGcmCryptoService cryptoService,
+            CorrelativoService correlativoService
     ) {
         this.certificadoRepository = certificadoRepository;
         this.transferenciaRepository = transferenciaRepository;
         this.socioRepository = socioRepository;
         this.auditService = auditService;
         this.cryptoService = cryptoService;
+        this.correlativoService = correlativoService;
     }
 
     @Transactional(readOnly = true)
@@ -120,10 +124,18 @@ public class AccionService {
     @Transactional(readOnly = true)
     public List<CertificadoAccionDto> listarCertificados(UUID socioId, String estado, String buscar) {
         UUID cajaId = getCajaIdActual();
+        UserContext context = UserContextHolder.getContext();
+        if (context != null && "SOCIO".equalsIgnoreCase(context.role())) {
+            if (context.socioId() == null) {
+                throw new org.springframework.security.access.AccessDeniedException("La cuenta no está asociada a un socio");
+            }
+            socioId = context.socioId();
+        }
+        final UUID socioFiltro = socioId;
         List<CertificadoAccion> list = certificadoRepository.findByCajaIdOrderByNumeroCertificadoDesc(cajaId);
 
         return list.stream()
-                .filter(c -> socioId == null || (c.getSocio() != null && c.getSocio().getId().equals(socioId)))
+                .filter(c -> socioFiltro == null || (c.getSocio() != null && c.getSocio().getId().equals(socioFiltro)))
                 .filter(c -> estado == null || estado.isBlank() || c.getEstado().equalsIgnoreCase(estado))
                 .filter(c -> {
                     if (buscar == null || buscar.isBlank()) return true;
@@ -158,7 +170,7 @@ public class AccionService {
         UUID cajaId = getCajaIdActual();
         UUID userId = getUserIdActual();
 
-        CertificadoAccion certOrigen = certificadoRepository.findByIdAndCajaId(req.certificadoOrigenId(), cajaId)
+        CertificadoAccion certOrigen = certificadoRepository.findByIdAndCajaIdForUpdate(req.certificadoOrigenId(), cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Certificado de origen no encontrado"));
 
         if (!"ACTIVO".equals(certOrigen.getEstado()) && !"EN_CARTERA".equals(certOrigen.getEstado()) && !"DEVUELTO_RETIRO".equals(certOrigen.getEstado())) {
@@ -177,11 +189,8 @@ public class AccionService {
         int transSerieInicio = certOrigen.getSerieInicio();
         int transSerieFin = transSerieInicio + req.cantidad() - 1;
 
-        Integer maxCertNum = certificadoRepository.findMaxNumeroCertificadoByCajaId(cajaId);
-        int nextCertNum = maxCertNum + 1;
-
-        Integer maxTransNum = transferenciaRepository.findMaxNumeroTransferenciaByCajaId(cajaId);
-        int nextTransNum = maxTransNum + 1;
+        int nextCertNum = correlativoService.siguiente(cajaId, "CERTIFICADO", certificadoRepository.findMaxNumeroCertificadoByCajaId(cajaId) + 1);
+        int nextTransNum = correlativoService.siguiente(cajaId, "TRANSFERENCIA", transferenciaRepository.findMaxNumeroTransferenciaByCajaId(cajaId) + 1);
 
         LocalDate fecha = req.fecha() != null ? req.fecha() : LocalDate.now();
         BigDecimal precio = req.precioUnitario() != null ? req.precioUnitario() : BigDecimal.valueOf(30.00);

@@ -1,4 +1,5 @@
 "use client"
+import { getErrorMessage } from "@/lib/error-message";
 
 import { useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -191,7 +192,7 @@ function FieldError({
     }
 
     const uniqueErrors = [
-      ...new Map(errors.map((error) => [error?.message, error])).values(),
+      ...new Map(errors.map((error) => [getErrorMessage(error, "Ocurrió un error"), error])).values(),
     ]
 
     if (uniqueErrors?.length == 1) {
@@ -202,7 +203,7 @@ function FieldError({
       <ul className="ml-4 flex list-disc flex-col gap-1">
         {uniqueErrors.map(
           (error, index) =>
-            error?.message && <li key={index}>{error.message}</li>
+            getErrorMessage(error, "Ocurrió un error") && <li key={index}>{getErrorMessage(error, "Ocurrió un error")}</li>
         )}
       </ul>
     )

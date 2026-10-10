@@ -7,6 +7,7 @@ import com.cajachambala.identidad.domain.UserRole;
 import com.cajachambala.identidad.infrastructure.audit.AuditService;
 import com.cajachambala.shared.infrastructure.security.UserContext;
 import com.cajachambala.shared.infrastructure.security.UserContextHolder;
+import com.cajachambala.shared.infrastructure.persistence.CorrelativoService;
 import com.cajachambala.socios.domain.Socio;
 import com.cajachambala.socios.domain.SocioEstado;
 import com.cajachambala.socios.infrastructure.persistence.SocioRepository;
@@ -40,6 +41,7 @@ public class CajaService {
     private final PrestamoRepository prestamoRepository;
     private final CuotaPrestamoRepository cuotaPrestamoRepository;
     private final AuditService auditService;
+    private final CorrelativoService correlativoService;
 
     public CajaService(
             PeriodoRepository periodoRepository,
@@ -50,7 +52,8 @@ public class CajaService {
             SocioRepository socioRepository,
             PrestamoRepository prestamoRepository,
             CuotaPrestamoRepository cuotaPrestamoRepository,
-            AuditService auditService
+            AuditService auditService,
+            CorrelativoService correlativoService
     ) {
         this.periodoRepository = periodoRepository;
         this.conceptoRepository = conceptoRepository;
@@ -61,6 +64,7 @@ public class CajaService {
         this.prestamoRepository = prestamoRepository;
         this.cuotaPrestamoRepository = cuotaPrestamoRepository;
         this.auditService = auditService;
+        this.correlativoService = correlativoService;
     }
 
     // ==========================================
@@ -203,7 +207,7 @@ public class CajaService {
         UUID cajaId = getCajaIdActual();
         UUID userId = getUserIdActual();
 
-        Periodo periodo = periodoRepository.findByIdAndCajaId(periodoId, cajaId)
+        Periodo periodo = periodoRepository.findByIdAndCajaIdForUpdate(periodoId, cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Periodo no encontrado"));
 
         if (periodo.getEstado() == PeriodoEstado.CERRADO) {
@@ -243,7 +247,7 @@ public class CajaService {
         // Numeración de recibo
         Integer nroRecibo = req.nroRecibo();
         if (nroRecibo == null && req.tipo() == FlujoTipo.INGRESO) {
-            nroRecibo = operacionRepository.findMaxNroReciboByCajaId(cajaId) + 1;
+            nroRecibo = correlativoService.siguiente(cajaId, "RECIBO", operacionRepository.findMaxNroReciboByCajaId(cajaId) + 1);
         }
 
         LocalDate fechaOperacion = req.fecha() != null ? req.fecha() : periodo.getFechaReunion();
@@ -345,7 +349,7 @@ public class CajaService {
         UUID cajaId = getCajaIdActual();
         UUID userId = getUserIdActual();
 
-        Periodo periodo = periodoRepository.findByIdAndCajaId(periodoId, cajaId)
+        Periodo periodo = periodoRepository.findByIdAndCajaIdForUpdate(periodoId, cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Periodo no encontrado"));
 
         BigDecimal saldoAnt = calcularSaldoAnterior(cajaId, periodo.getAnio(), periodo.getMes());
@@ -440,7 +444,7 @@ public class CajaService {
         UUID cajaId = getCajaIdActual();
         UUID userId = getUserIdActual();
 
-        Periodo periodo = periodoRepository.findByIdAndCajaId(periodoId, cajaId)
+        Periodo periodo = periodoRepository.findByIdAndCajaIdForUpdate(periodoId, cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Periodo no encontrado"));
 
         if (periodo.getEstado() == PeriodoEstado.CERRADO) {
@@ -613,7 +617,7 @@ public class CajaService {
         LocalDate fecha = periodo.getFechaReunion();
 
         for (Socio socio : sociosActivos) {
-            nroRecibo++;
+            nroRecibo = correlativoService.siguiente(cajaId, "RECIBO", nroRecibo + 1);
             String desc = "Aportes y cobranzas " + periodo.getMes() + "/" + periodo.getAnio() + " - " + socio.getNombreCompleto();
             Operacion op = new Operacion(cajaId, periodo.getId(), socio.getId(), FlujoTipo.INGRESO, fecha, nroRecibo, desc, userId);
 
@@ -1135,7 +1139,7 @@ public class CajaService {
         UUID cajaId = getCajaIdActual();
         UUID userId = getUserIdActual();
 
-        Periodo periodo = periodoRepository.findByIdAndCajaId(periodoId, cajaId)
+        Periodo periodo = periodoRepository.findByIdAndCajaIdForUpdate(periodoId, cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Periodo no encontrado"));
 
         if (periodo.getEstado() == PeriodoEstado.CERRADO) {
@@ -1335,7 +1339,7 @@ public class CajaService {
             // Actualizar o crear Operacion de INGRESO
             if (totalIngreso.compareTo(BigDecimal.ZERO) > 0) {
                 if (opIngreso == null) {
-                    nextRecibo++;
+                    nextRecibo = correlativoService.siguiente(cajaId, "RECIBO", nextRecibo + 1);
                     String desc = "Aportes y cobranzas " + periodo.getMes() + "/" + periodo.getAnio() + " - " + socio.getNombreCompleto();
                     opIngreso = new Operacion(cajaId, periodoId, socio.getId(), FlujoTipo.INGRESO, periodo.getFechaReunion(), nextRecibo, desc, userId);
                 }

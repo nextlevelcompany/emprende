@@ -3,9 +3,11 @@
 import { useWizard } from "./WizardContext"
 import { Button } from "@/components/ui/button"
 import StepProgress from "./StepProgress"
+import { Children, type ReactNode } from "react"
 
-export default function FormWizard({ children }: any) {
+export default function FormWizard({ children }: { children: ReactNode }) {
   const { step, next, back } = useWizard()
+  const steps = Children.toArray(children)
 
   return (
     <div className="w-full mx-auto p-8 space-y-8">
@@ -14,7 +16,7 @@ export default function FormWizard({ children }: any) {
       <StepProgress currentStep={step} />
 
       {/* Render Step */}
-      <div>{children[step - 1]}</div>
+      <div>{steps[step - 1]}</div>
 
       {/* Controls */}
       <div className="flex justify-between pt-4">

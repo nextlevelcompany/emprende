@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import { useMemo, useState } from "react"
 import {
   Card,
@@ -300,7 +301,7 @@ export default function CategoryList() {
                   </TableCell>
 
                   <TableCell>
-                    <img
+                    <Image unoptimized height={480} width={640}
                       src={cat.image}
                       alt={cat.name}
                       className="h-10 w-10 rounded-full border object-cover p-1 bg-muted/50"

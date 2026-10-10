@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { OctagonX, ShieldHalf, TrendingUp, CircleCheckBig, Smartphone, Tablet, Monitor, TrendingDown } from "lucide-react"
+import {  TrendingUp, Smartphone, Tablet, Monitor, TrendingDown } from "lucide-react"
 import { Label, Pie, PieChart, Cell } from "recharts"
 
 import {
@@ -26,22 +26,14 @@ const chartData = [
     { device: "Smart TV", visitors: 95, fill: "var(--chart-4)" },
     { device: "Other", visitors: 60, fill: "var(--chart-5)" },
 ]
-const gradientMap: Record<string, [string, string]> = {
-    chrome: ["#ee0979", "#ff6a00"],
-    safari: ["#00c6fb", "#005bea"],
-    firefox: ["#17ad37", "#98ec2d"],
-    edge: ["#7928ca", "#ff0080"],
-    other: ["#f7971e", "#ffd200"],
-}
+type DeviceTooltipEntry = { payload: { fill: string }; name?: string; value?: number | string }
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: DeviceTooltipEntry[] }) => {
     if (!active || !payload?.length) return null
 
     return (
         <div className="rounded-lg border bg-background p-2 shadow-md">
-            {payload.map((entry: any, index: number) => {
-                const color = entry.payload.fill
-
+            {payload.map((entry, index) => {
                 return (
                     <div key={index} className="flex items-center gap-2 text-sm">
 

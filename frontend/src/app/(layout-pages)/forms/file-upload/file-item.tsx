@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { useEffect } from "react";
@@ -27,7 +28,7 @@ export function UploadedFileItem({
     >
       <div className="flex items-center gap-2">
         <div className="w-18 h-14 bg-muted rounded-sm flex items-center justify-center self-start row-span-2 overflow-hidden">
-          <img
+          <Image unoptimized height={480} width={640}
             src={imageUrl}
             alt={file.name}
             className="w-full h-full object-cover"

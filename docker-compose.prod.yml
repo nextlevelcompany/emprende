@@ -4,9 +4,11 @@ services:
     container_name: caja_chambala_prod_db
     restart: always
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      DB_APP_RW_PASSWORD: ${DB_APP_RW_PASSWORD:?DB_APP_RW_PASSWORD is required}
+      DB_APP_RO_PASSWORD: ${DB_APP_RO_PASSWORD:?DB_APP_RO_PASSWORD is required}
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
       - ./docker/init-db:/docker-entrypoint-initdb.d:ro
@@ -22,6 +24,40 @@ services:
         limits:
           memory: 1G
 
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: caja_chambala_prod_migrate
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["java", "-Dspring.main.web-application-type=none", "-Dbootstrap.admin.enabled=false", "-jar", "app.jar"]
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?POSTGRES_USER is required}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      FLYWAY_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      AES_GCM_ENCRYPTION_KEY: ${AES_GCM_ENCRYPTION_KEY:?AES_GCM_ENCRYPTION_KEY is required}
+      RLS_CONTEXT_HMAC_SECRET_HEX: ${RLS_CONTEXT_HMAC_SECRET_HEX:?RLS_CONTEXT_HMAC_SECRET_HEX is required}
+      APP_CORS_ALLOWED_ORIGIN: ${APP_CORS_ALLOWED_ORIGIN:?APP_CORS_ALLOWED_ORIGIN is required}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:?ADMIN_DEFAULT_PASSWORD is required}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:?SMTP_FROM is required}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL is required}
+    networks:
+      - internal_net
+
   backend:
     build:
       context: ./backend
@@ -31,16 +67,28 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      SPRING_FLYWAY_ENABLED: "false"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       SPRING_DATASOURCE_USERNAME: app_rw
-      SPRING_DATASOURCE_PASSWORD: ${DB_APP_RW_PASSWORD}
-      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
-      FLYWAY_USER: ${POSTGRES_USER}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATASOURCE_PASSWORD: ${DB_APP_RW_PASSWORD:?DB_APP_RW_PASSWORD is required}
       PORT: 8080
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      AES_GCM_ENCRYPTION_KEY: ${AES_GCM_ENCRYPTION_KEY:?AES_GCM_ENCRYPTION_KEY is required}
+      RLS_CONTEXT_HMAC_SECRET_HEX: ${RLS_CONTEXT_HMAC_SECRET_HEX:?RLS_CONTEXT_HMAC_SECRET_HEX is required}
+      APP_CORS_ALLOWED_ORIGIN: ${APP_CORS_ALLOWED_ORIGIN:?APP_CORS_ALLOWED_ORIGIN is required}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:?ADMIN_DEFAULT_PASSWORD is required}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:?SMTP_FROM is required}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL is required}
     networks:
       - internal_net
     ports:

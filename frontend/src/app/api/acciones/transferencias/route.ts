@@ -1,7 +1,8 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const backendRes = await fetchWithAuth("/acciones/transferencias");
     const text = await backendRes.text();
@@ -12,8 +13,8 @@ export async function GET(req: NextRequest) {
       data = { detail: text || "Respuesta no JSON del servidor" };
     }
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al obtener transferencias de acciones" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al obtener transferencias de acciones") }, { status: 500 });
   }
 }
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       data = { detail: text || "Respuesta no JSON del servidor" };
     }
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al procesar transferencia de acciones" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al procesar transferencia de acciones") }, { status: 500 });
   }
 }

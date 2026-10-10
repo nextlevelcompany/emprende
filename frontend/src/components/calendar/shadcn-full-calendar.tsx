@@ -22,6 +22,7 @@ export default function ShadcnFullCalendar() {
 
   const [currentView, setCurrentView] =
     useState<"dayGridMonth" | "timeGridWeek" | "timeGridDay">("dayGridMonth")
+  const [currentTitle, setCurrentTitle] = useState("")
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -65,7 +66,7 @@ export default function ShadcnFullCalendar() {
 
         {/* Center Title */}
         <h2 className="text-lg font-semibold">
-          {calendarRef.current?.getApi().view.title}
+          {currentTitle}
         </h2>
 
         {/* Right */}
@@ -112,7 +113,12 @@ export default function ShadcnFullCalendar() {
   editable
   selectable
 
-  datesSet={(arg) => setCurrentView(arg.view.type as any)}
+  datesSet={(arg) => {
+    setCurrentTitle(arg.view.title)
+    if (arg.view.type === "dayGridMonth" || arg.view.type === "timeGridWeek" || arg.view.type === "timeGridDay") {
+      setCurrentView(arg.view.type)
+    }
+  }}
 
   dateClick={(info) => {
     setSelectedDate(info.dateStr)
@@ -146,6 +152,7 @@ export default function ShadcnFullCalendar() {
 
       {/* 🧩 Dialog */}
       <EventDialog
+        key={`${selectedEvent?.id ?? "new"}:${selectedDate ?? ""}`}
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         selectedDate={selectedDate}

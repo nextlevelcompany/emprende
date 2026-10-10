@@ -37,7 +37,11 @@ public class AuditService {
     ) {
         String antesJson = toJson(antes);
         String despuesJson = toJson(despues);
-        log(cajaId, actorUserId, actorRole, accion, entidad, entidadId, antesJson, despuesJson, ip, userAgent, null);
+        HttpServletRequest request = currentRequest();
+        String resolvedIp = (ip == null || ip.isBlank() || "127.0.0.1".equals(ip)) && request != null ? getClientIp(request) : ip;
+        String resolvedAgent = (userAgent == null || "Internal".equals(userAgent)) && request != null ? request.getHeader("User-Agent") : userAgent;
+        UUID requestId = parseRequestId(request != null ? request.getHeader("X-Request-ID") : null);
+        log(cajaId, actorUserId, actorRole, accion, entidad, entidadId, antesJson, despuesJson, resolvedIp, resolvedAgent, requestId);
     }
 
     private String toJson(Object obj) {
@@ -94,17 +98,30 @@ public class AuditService {
         UUID requestId = null;
         try {
             if (reqIdHeader != null) requestId = UUID.fromString(reqIdHeader);
-        } catch (Exception ignored) {}
+        } catch (IllegalArgumentException ignored) {
+            requestId = UUID.nameUUIDFromBytes(reqIdHeader.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
 
-        String jsonDetalle = (detalle != null) ? "{\"detalle\":\"" + detalle + "\"}" : null;
+        String jsonDetalle = toJson(detalle != null ? java.util.Map.of("detalle", detalle) : null);
         log(cajaId, actorUserId, actorRole, accion, "SEGURIDAD", actorUserId, null, jsonDetalle, ip, userAgent, requestId);
     }
 
     public static String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
+    }
+
+    private HttpServletRequest currentRequest() {
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return attributes instanceof org.springframework.web.context.request.ServletRequestAttributes servlet
+                ? servlet.getRequest() : null;
+    }
+
+    private UUID parseRequestId(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException ignored) {
+            return UUID.nameUUIDFromBytes(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
     }
 }

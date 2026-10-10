@@ -5,3 +5,17 @@ logging:
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+  crypto:
+    secret: ${AES_GCM_ENCRYPTION_KEY}
+
+app:
+  cors:
+    allowed-origin: http://localhost:3000
+
+bootstrap:
+  admin:
+    password: ${ADMIN_DEFAULT_PASSWORD}

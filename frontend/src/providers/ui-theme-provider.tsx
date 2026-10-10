@@ -19,7 +19,7 @@ export default function UIThemeProvider({
   // ✅ Load theme on mount
   useEffect(() => {
     loadTheme()
-  }, [])
+  }, [loadTheme])
 
   // ✅ Apply theme
   useEffect(() => {

@@ -46,7 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     UUID userId = UUID.fromString(claims.getSubject());
                     AppUser user = appUserRepository.findById(userId).orElse(null);
 
-                    if (user != null && jwtService.isAccessTokenValid(claims, user) && !user.isAccountLocked()) {
+                    if (user != null && jwtService.isAccessTokenValid(claims, user) && user.isAuthenticationAllowed()) {
                         String role = claims.get("role", String.class);
                         UUID cajaId = UUID.fromString(claims.get("caja", String.class));
                         String socioIdStr = claims.get("socio_id", String.class);

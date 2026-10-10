@@ -16,13 +16,13 @@ interface Item {
 
 export default function FormRepeater() {
   const [items, setItems] = useState<Item[]>([
-    { id: Date.now(), name: "", quantity: 1, price: 0 },
+    { id: 1, name: "", quantity: 1, price: 0 },
   ])
 
   const addItem = () => {
     setItems([
       ...items,
-      { id: Date.now(), name: "", quantity: 1, price: 0 },
+      { id: items.reduce((maxId, item) => Math.max(maxId, item.id), 0) + 1, name: "", quantity: 1, price: 0 },
     ])
   }
 
@@ -52,7 +52,7 @@ export default function FormRepeater() {
 
       {/* Items */}
       <div className="space-y-4">
-        {items.map((item, index) => (
+        {items.map((item) => (
           <Card key={item.id} className="rounded-xl shadow-sm">
             <CardContent className="p-4 grid md:grid-cols-4 gap-4 items-end">
 

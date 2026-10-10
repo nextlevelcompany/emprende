@@ -42,14 +42,14 @@ public class CajaController {
     }
 
     @GetMapping("/periodos/abierto")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SOCIO')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PeriodoResponse> obtenerPeriodoAbierto() {
         PeriodoResponse response = cajaService.obtenerPeriodoAbiertoActual();
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/periodos/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SOCIO')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PeriodoResponse> obtenerPeriodo(@PathVariable UUID id) {
         PeriodoResponse response = cajaService.obtenerPeriodo(id);
         return ResponseEntity.ok(response);

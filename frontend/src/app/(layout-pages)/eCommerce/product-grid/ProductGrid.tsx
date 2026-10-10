@@ -1,5 +1,6 @@
 "use client"
-import { useMemo, useState, useEffect } from "react"
+import Image from "next/image"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import {
   Card,
@@ -28,6 +29,7 @@ import {
   Users,
   Box,
 } from "lucide-react"
+import type { ComponentProps } from "react"
 
 
 const products = [
@@ -156,13 +158,10 @@ export default function ProductGrid() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
-  useEffect(() => {
-    setPage(p => Math.min(p, totalPages))
-  }, [totalPages])
-
+  const currentPage = Math.min(page, totalPages)
   const paginated = filtered.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
   )
 
   const toggleOne = (id: number) => {
@@ -404,7 +403,12 @@ function ProductGridCard({
   selected,
   onSelect,
   onDelete,
-}: any) {
+}: {
+  product: (typeof products)[number]
+  selected: boolean
+  onSelect: ComponentProps<typeof Checkbox>["onCheckedChange"]
+  onDelete: () => void
+}) {
   return (
     <Card className="group overflow-hidden transition hover:shadow-lg border hover:border-primary cursor-pointer shadow-none hover:shadow-primary/10">
       <CardContent className="p-4 space-y-4">
@@ -436,7 +440,7 @@ function ProductGridCard({
 
         {/* Image */}
         <div className="aspect-square rounded-xl bg-muted overflow-hidden">
-          <img
+          <Image unoptimized height={480} width={640}
             src={product.image}
             alt={product.name}
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300 p-4"

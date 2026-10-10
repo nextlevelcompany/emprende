@@ -6,16 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTheme } from "next-themes"
 import { Sun, Moon } from "lucide-react"
+import { useIsMounted } from "@/hooks/use-is-mounted"
 
 export default function ComingSoon() {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  const [timeLeft, setTimeLeft] = useState<any>({})
+  const mounted = useIsMounted()
+  const [timeLeft, setTimeLeft] = useState<{ days?: number; hours?: number; minutes?: number; seconds?: number }>({})
   const [email, setEmail] = useState("")
 
   useEffect(() => {
-    setMounted(true)
-
     const targetDate = new Date()
     targetDate.setDate(targetDate.getDate() + 5)
 
@@ -104,7 +103,7 @@ export default function ComingSoon() {
 
           {/* Countdown */}
           <div className="mt-10 grid grid-cols-4 gap-6 text-center">
-            {["days", "hours", "minutes", "seconds"].map((unit) => (
+            {(["days", "hours", "minutes", "seconds"] as const).map((unit) => (
               <div key={unit}>
                 <div className="text-3xl font-semibold text-foreground">
                   {timeLeft[unit] ?? "00"}

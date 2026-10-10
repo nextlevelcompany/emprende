@@ -4,6 +4,8 @@ import com.cajachambala.socios.application.SocioService;
 import com.cajachambala.socios.application.dto.SocioDtos.*;
 import com.cajachambala.socios.domain.SocioEstado;
 import com.cajachambala.socios.domain.SocioTipo;
+import com.cajachambala.shared.infrastructure.security.UserContext;
+import com.cajachambala.shared.infrastructure.security.UserContextHolder;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,16 @@ public class SocioController {
 
     public SocioController(SocioService socioService) {
         this.socioService = socioService;
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('SOCIO')")
+    public ResponseEntity<SocioResponse> obtenerMiPerfil() {
+        UserContext context = UserContextHolder.getContext();
+        if (context == null || context.socioId() == null) {
+            throw new org.springframework.security.access.AccessDeniedException("La cuenta no está asociada a un socio");
+        }
+        return ResponseEntity.ok(socioService.obtenerSocio(context.socioId()));
     }
 
     @PostMapping

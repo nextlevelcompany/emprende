@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 
@@ -12,8 +13,8 @@ export async function GET() {
       data = { detail: text || "Respuesta no JSON" };
     }
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al listar periodos" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al listar periodos") }, { status: 500 });
   }
 }
 
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
       data = { detail: text || "Respuesta no JSON" };
     }
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al crear periodo" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al crear periodo") }, { status: 500 });
   }
 }

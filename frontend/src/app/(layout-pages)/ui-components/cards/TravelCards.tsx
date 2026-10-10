@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { MapPin, Plane, Heart } from "lucide-react"
 
@@ -14,7 +15,7 @@ export function TravelCards() {
         <div className="rounded-3xl overflow-hidden bg-card border shadow hover:-translate-y-2 hover:shadow-2xl transition-all duration-500">
 
           <div className="relative">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/travel/01.jpeg"
               alt="San Francisco"
               className="w-full h-80 object-cover"
@@ -70,7 +71,7 @@ export function TravelCards() {
         {/* Card 2 */}
         <div className="rounded-3xl overflow-hidden bg-card border shadow hover:-translate-y-2 hover:shadow-2xl transition-all duration-500">
 
-          <img
+          <Image unoptimized height={480} width={640}
             src="/pulse-ui-next/images/cards/travel/02.jpeg"
             alt="Paris"
             className="w-full h-80 object-cover"
@@ -125,7 +126,7 @@ export function TravelCards() {
         {/* Card 3 */}
         <div className="rounded-3xl overflow-hidden bg-card border shadow hover:-translate-y-2 hover:shadow-2xl transition-all duration-500">
 
-          <img
+          <Image unoptimized height={480} width={640}
             src="/pulse-ui-next/images/cards/travel/03.jpeg"
             alt="Tokyo"
             className="w-full h-80 object-cover"

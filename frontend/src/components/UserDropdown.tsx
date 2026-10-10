@@ -15,10 +15,34 @@ import {
   LayoutDashboard,
   ShieldCheck,
   LogOut,
+  CircleUserRound,
 } from "lucide-react"
+
+type AdminSessionUser = {
+  email?: string;
+  role?: string;
+  status?: string;
+  displayName?: string | null;
+};
 
 export function UserDropdown() {
   const router = useRouter()
+  const [user, setUser] = React.useState<AdminSessionUser | null>(null)
+
+  React.useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((profile) => { if (active && profile?.role === "ADMIN") setUser(profile); })
+      .catch(() => { if (active) setUser(null); });
+    return () => { active = false; };
+  }, [])
+
+  const email = user?.email || "Sesión de administrador";
+  const displayName = user?.displayName?.trim() || "Administrador";
+  const initials = user?.displayName?.trim()
+    ? user.displayName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()
+    : email === "Sesión de administrador" ? "AD" : email.slice(0, 2).toUpperCase();
 
   const handleLogout = async () => {
     try {
@@ -36,11 +60,11 @@ export function UserDropdown() {
         <div className="flex items-center gap-3 cursor-pointer px-3 border-r border-l h-16 ml-3 hover:bg-muted/40 transition-colors">
           <Avatar className="h-9 w-9 border border-primary/20">
             <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
-              AD
+              {initials}
             </AvatarFallback>
           </Avatar>
           <div className="hidden md:flex flex-col gap-0.5 text-left">
-            <p className="text-xs font-semibold leading-none">Administrador</p>
+            <p className="max-w-28 truncate text-xs font-semibold leading-none">{displayName}</p>
             <p className="text-[10px] text-muted-foreground leading-none">Emprende Chambala</p>
           </div>
         </div>
@@ -53,17 +77,25 @@ export function UserDropdown() {
           <div className="flex items-center gap-2.5">
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary/20 text-primary font-semibold text-xs">
-                AD
+                {initials}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-xs font-semibold leading-tight">Administración</p>
-              <p className="text-[10px] text-muted-foreground">admin@cajachambala.pe</p>
+              <p className="max-w-40 truncate text-xs font-semibold leading-tight">{displayName}</p>
+              <p className="max-w-[155px] truncate text-[10px] text-muted-foreground">{email}</p>
             </div>
           </div>
         </DropdownMenuLabel>
 
         {/* Items */}
+        <DropdownMenuItem
+          onClick={() => router.push("/admin/perfil")}
+          className="gap-2 text-xs h-8 cursor-pointer"
+        >
+          <CircleUserRound className="size-4 text-muted-foreground" />
+          Datos del administrador
+        </DropdownMenuItem>
+
         <DropdownMenuItem
           onClick={() => router.push("/dashboard/analytics")}
           className="gap-2 text-xs h-8 cursor-pointer"

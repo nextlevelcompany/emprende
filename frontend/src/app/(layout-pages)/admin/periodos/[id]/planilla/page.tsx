@@ -1,7 +1,8 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   FileSpreadsheet,
@@ -14,18 +15,15 @@ import {
   CheckCircle2,
   AlertTriangle,
   Trash2,
-  Download,
   TrendingUp,
   TrendingDown,
   Wallet,
   Building,
-  ShieldCheck,
   Receipt,
   Save,
   RotateCcw,
   Check,
   X,
-  Info,
   ChevronDown,
   Pencil,
   CalendarClock,
@@ -222,7 +220,6 @@ const MESES = [
 
 export default function PlanillaMensualPage() {
   const params = useParams();
-  const router = useRouter();
   const periodoId = params?.id as string;
 
   const [data, setData] = React.useState<PlanillaData | null>(null);
@@ -417,7 +414,7 @@ export default function PlanillaMensualPage() {
       setData(respData);
       setFilasEditables(
         respData.filas
-          ? respData.filas.map((f: any) => ({
+          ? respData.filas.map((f: FilaPlanilla) => ({
               ...f,
               acciones: Number(f.acciones) > 0 ? Number(f.acciones) : 30,
               pagoCapital: Number(f.pagoCapital) > 0 ? Number(f.pagoCapital) : (Number(f.cuotaCapitalProgramado) || 0),
@@ -431,14 +428,14 @@ export default function PlanillaMensualPage() {
       if (respData.periodo?.fechaReunion) {
         setFechaOperacion(respData.periodo.fechaReunion);
       }
-    } catch (err: any) {
-      toast.error(err.message || "Error al cargar planilla mensual");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar planilla mensual"));
     } finally {
       setLoading(false);
     }
   }, [periodoId]);
 
-  const handleCellChange = (idx: number, campo: keyof FilaPlanilla, valor: any) => {
+  const handleCellChange = (idx: number, campo: keyof FilaPlanilla, valor: FilaPlanilla[keyof FilaPlanilla]) => {
     setFilasEditables((prev) => {
       const copy = [...prev];
       const f = { ...copy[idx], [campo]: valor };
@@ -649,7 +646,7 @@ export default function PlanillaMensualPage() {
             prestamoId: f.prestamoId || null,
             cuotasSeleccionadasIds: f.cuotaPagada
               ? (f.detallesPrestamos && f.detallesPrestamos.length > 0
-                  ? f.detallesPrestamos.map((d: any) => d.cuotaId)
+                  ? f.detallesPrestamos.map((d: DetalleCuotaPlanilla) => d.cuotaId)
                   : (f.cuotaId ? [f.cuotaId] : []))
               : [],
           })),
@@ -669,7 +666,7 @@ export default function PlanillaMensualPage() {
       setData(respData);
       setFilasEditables(
         respData.filas
-          ? respData.filas.map((f: any) => ({
+          ? respData.filas.map((f: FilaPlanilla) => ({
               ...f,
               acciones: Number(f.acciones) > 0 ? Number(f.acciones) : 30,
               pagoCapital: Number(f.pagoCapital) > 0 ? Number(f.pagoCapital) : (Number(f.cuotaCapitalProgramado) || 0),
@@ -681,8 +678,8 @@ export default function PlanillaMensualPage() {
       );
       setIsDirty(false);
       toast.success("Planilla guardada exitosamente. Se sincronizaron las cuotas e ingresos.");
-    } catch (err: any) {
-      toast.error(err.message || "Error al guardar planilla");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al guardar planilla"));
     } finally {
       setGuardando(false);
     }
@@ -709,7 +706,7 @@ export default function PlanillaMensualPage() {
       setData(respData);
       setFilasEditables(
         respData.filas
-          ? respData.filas.map((f: any) => ({
+          ? respData.filas.map((f: FilaPlanilla) => ({
               ...f,
               acciones: Number(f.acciones) > 0 ? Number(f.acciones) : 30,
               pagoCapital: Number(f.pagoCapital) > 0 ? Number(f.pagoCapital) : (Number(f.cuotaCapitalProgramado) || 0),
@@ -721,8 +718,8 @@ export default function PlanillaMensualPage() {
       );
       setIsDirty(false);
       toast.success("Valores sugeridos cargados: 1 acción por socio y cuotas de préstamos del mes.");
-    } catch (err: any) {
-      toast.error(err.message || "Error al pre-cargar planilla");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al pre-cargar planilla"));
     } finally {
       setPrecargando(false);
     }
@@ -742,7 +739,7 @@ export default function PlanillaMensualPage() {
         const socData = await resSoc.json();
         const listaSoc = Array.isArray(socData) ? socData : socData.content || [];
         setSocios(
-          listaSoc.map((s: any) => ({
+          listaSoc.map((s: SocioMini) => ({
             id: s.id,
             codigo: s.codigo,
             nombreCompleto: s.nombreCompleto,
@@ -804,8 +801,8 @@ export default function PlanillaMensualPage() {
       setDescripcionOperacion("");
       setNroReciboManual("");
       cargarPlanilla();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setProcesando(false);
     }
@@ -829,8 +826,8 @@ export default function PlanillaMensualPage() {
       toast.success("Arqueo de caja registrado correctamente");
       setModalArqueo(false);
       cargarPlanilla();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setProcesando(false);
     }
@@ -960,8 +957,8 @@ export default function PlanillaMensualPage() {
       setPrestamoOpEgresoId(null);
       setPrestamoMonto("");
       cargarPlanilla();
-    } catch (err: any) {
-      toast.error(err.message || "Error al otorgar préstamo");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al otorgar préstamo"));
     } finally {
       setProcesando(false);
     }
@@ -985,8 +982,8 @@ export default function PlanillaMensualPage() {
       setEditPrestamoProposito(p.proposito || "");
       setEditPrestamoObservacion("");
       setModalEditarPrestamo(true);
-    } catch (err: any) {
-      toast.error(err.message || "Error al abrir edición de préstamo");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al abrir edición de préstamo"));
     } finally {
       setProcesando(false);
     }
@@ -1038,8 +1035,8 @@ export default function PlanillaMensualPage() {
       toast.success("Préstamo modificado correctamente y cronograma recalculado.");
       setModalEditarPrestamo(false);
       cargarPlanilla();
-    } catch (err: any) {
-      toast.error(err.message || "Error al editar préstamo");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al editar préstamo"));
     } finally {
       setProcesando(false);
     }
@@ -1079,8 +1076,8 @@ export default function PlanillaMensualPage() {
       toast.success("Préstamo eliminado exitosamente. El egreso contable fue anulado y el saldo regresó a caja.");
       setModalEliminarPrestamo(false);
       cargarPlanilla();
-    } catch (err: any) {
-      toast.error(err.message || "Error al eliminar préstamo");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al eliminar préstamo"));
     } finally {
       setProcesando(false);
     }
@@ -1099,7 +1096,7 @@ export default function PlanillaMensualPage() {
       setModCuotasSocio(p.socioNombreCompleto || "Socio");
       setModCuotasPrincipal(Number(p.montoPrincipal) || 0);
       setModCuotasLista(
-        cronograma.map((c: any) => ({
+        cronograma.map((c: { id: string; nroCuota: number; fechaVencimiento: string; capitalProgramado: number; interesProgramado: number; capitalPagado: number; interesPagado: number; estado: string }) => ({
           id: c.id,
           nroCuota: c.nroCuota,
           fechaVencimiento: c.fechaVencimiento,
@@ -1112,8 +1109,8 @@ export default function PlanillaMensualPage() {
       );
       setModCuotasObservacion("");
       setModalModificarCuotas(true);
-    } catch (err: any) {
-      toast.error(err.message || "Error al abrir reprogramación de cuotas");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al abrir reprogramación de cuotas"));
     } finally {
       setProcesando(false);
     }
@@ -1162,8 +1159,8 @@ export default function PlanillaMensualPage() {
       toast.success("Cuotas reprogramadas exitosamente con justificación registrada.");
       setModalModificarCuotas(false);
       cargarPlanilla();
-    } catch (err: any) {
-      toast.error(err.message || "Error al reprogramar cuotas");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al reprogramar cuotas"));
     } finally {
       setProcesando(false);
     }
@@ -1187,8 +1184,8 @@ export default function PlanillaMensualPage() {
       toast.success("Periodo cerrado exitosamente con foto de integridad SHA-256");
       setModalCierre(false);
       cargarPlanilla();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setProcesando(false);
     }
@@ -1214,8 +1211,8 @@ export default function PlanillaMensualPage() {
       setModalAnular(null);
       setMotivoAnulacion("");
       cargarPlanilla();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setProcesando(false);
     }
@@ -1576,7 +1573,7 @@ export default function PlanillaMensualPage() {
                 {filasRender.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={18} className="text-center py-12 text-muted-foreground">
-                      No hay operaciones registradas aún en este periodo. Utilice "Pre-cargar Sugeridos" o "Registrar Operación" para comenzar.
+                      No hay operaciones registradas aún en este periodo. Utilice &quot;Pre-cargar Sugeridos&quot; o &quot;Registrar Operación&quot; para comenzar.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -2200,7 +2197,7 @@ export default function PlanillaMensualPage() {
                 <div className="space-y-0.5">
                   <p className="font-semibold">¿Va a otorgar un préstamo a un socio?</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Para registrar un préstamo formal con su cronograma de cuotas mensuales y cálculo de intereses, recomendamos utilizar directamente la opción <strong>"Otorgar Préstamo"</strong>.
+                    Para registrar un préstamo formal con su cronograma de cuotas mensuales y cálculo de intereses, recomendamos utilizar directamente la opción <strong>&quot;Otorgar Préstamo&quot;</strong>.
                   </p>
                 </div>
               </div>
@@ -3035,7 +3032,7 @@ export default function PlanillaMensualPage() {
                 En la metodología de Caja Comunal (UNICA), no se puede cerrar la caja si existe saldo disponible. Todo el dinero recaudado en la asamblea debe colocarse en préstamos a los socios hasta que el saldo final llegue exactamente a <strong>S/. 0.00</strong>.
               </p>
               <p className="font-semibold text-foreground">
-                Utilice el botón verde "Otorgar Préstamo" para colocar los S/. {Number(data.saldoFinal).toFixed(2)} restantes antes de congelar el periodo.
+                Utilice el botón verde &quot;Otorgar Préstamo&quot; para colocar los S/. {Number(data.saldoFinal).toFixed(2)} restantes antes de congelar el periodo.
               </p>
             </div>
           ) : (

@@ -1,22 +1,16 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
 import {
   UserCheck,
-  Award,
   Users,
-  Shield,
   Save,
   Plus,
   Trash2,
   RefreshCw,
   FileCheck,
-  CheckCircle2,
-  Calendar,
-  CreditCard,
-  Phone,
-  Mail,
   Info,
   ExternalLink,
 } from "lucide-react";
@@ -35,7 +29,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -161,8 +154,8 @@ export default function JuntaDirectivaPage() {
       } else {
         setSocios([]);
       }
-    } catch (err: any) {
-      toast.error(err.message || "Error al cargar la junta directiva");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar la junta directiva"));
     } finally {
       setCargando(false);
       setIsDirty(false);
@@ -173,7 +166,7 @@ export default function JuntaDirectivaPage() {
     cargarDatos();
   }, [cargarDatos]);
 
-  const handleChangeCargo = (index: number, campo: keyof DirectivaCargo, valor: any) => {
+  const handleChangeCargo = (index: number, campo: keyof DirectivaCargo, valor: DirectivaCargo[keyof DirectivaCargo]) => {
     setCargos((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [campo]: valor };
@@ -297,8 +290,8 @@ export default function JuntaDirectivaPage() {
       setCargos(resData);
       setIsDirty(false);
       toast.success("Junta Directiva guardada y actualizada exitosamente. Los certificados usarán estas firmas.");
-    } catch (err: any) {
-      toast.error(err.message || "Error al guardar la junta directiva");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al guardar la junta directiva"));
     } finally {
       setGuardando(false);
     }
@@ -357,7 +350,7 @@ export default function JuntaDirectivaPage() {
         <div className="bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 px-4 py-2.5 rounded-lg flex items-center justify-between text-xs md:text-sm">
           <div className="flex items-center gap-2">
             <Info className="size-4 shrink-0 text-amber-600" />
-            <span>Tiene modificaciones sin guardar en la directiva. Recuerde hacer clic en <strong>"Guardar Directiva"</strong>.</span>
+             <span>Tiene modificaciones sin guardar en la directiva. Recuerde hacer clic en <strong>&quot;Guardar Directiva&quot;</strong>.</span>
           </div>
           <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/50" onClick={handleGuardar}>
             Guardar Ahora

@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { Gauge, ShieldHalf, OctagonX } from "lucide-react"
+import { Gauge, ShieldHalf } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -23,7 +23,7 @@ import {
 
 type Range = "weekly" | "monthly" | "yearly"
 
-const chartData: Record<Range, any[]> = {
+const chartData: Record<Range, Array<{ label: string; visitors: number; sales: number }>> = {
   weekly: [
     { label: "Mon", visitors: 40, sales: 60 },
     { label: "Tue", visitors: 55, sales: 75 },

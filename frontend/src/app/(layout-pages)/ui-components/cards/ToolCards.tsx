@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,7 @@ export function ToolCards() {
           <CardContent className="p-0 space-y-4">
 
             <div className="flex justify-between items-center">
-              <img
+              <Image unoptimized height={480} width={640}
                 src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/figma/figma-original.svg"
                 alt="Figma"
                 className="w-10 h-10"
@@ -29,7 +30,7 @@ export function ToolCards() {
             </h3>
 
             <p className="text-muted-foreground text-md">
-              Our elite teams build apps, responsive websites, bots — any digital product that interacts with users worldwide.
+              Our elite teams build apps, responsive websites, bots — unknown digital product that interacts with users worldwide.
             </p>
 
             <div className="flex justify-between items-center pt-2">
@@ -58,7 +59,7 @@ export function ToolCards() {
           <CardContent className="p-0 space-y-4">
 
             <div className="flex justify-between items-center">
-              <img
+              <Image unoptimized height={480} width={640}
                 src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/notion/notion-original.svg"
                 alt="Notion"
                 className="w-10 h-10"
@@ -100,7 +101,7 @@ export function ToolCards() {
           <CardContent className="p-0 space-y-4">
 
             <div className="flex justify-between items-center">
-              <img
+              <Image unoptimized height={480} width={640}
                 src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/slack/slack-original.svg"
                 alt="Slack"
                 className="w-10 h-10"
@@ -142,7 +143,7 @@ export function ToolCards() {
           <CardContent className="p-0 space-y-4">
 
             <div className="flex justify-between items-center">
-              <img
+              <Image unoptimized height={480} width={640}
                 src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/trello/trello-plain.svg"
                 alt="Trello"
                 className="w-10 h-10"
@@ -184,7 +185,7 @@ export function ToolCards() {
   <CardContent className="p-0 space-y-4">
 
     <div className="flex justify-between items-center">
-      <img
+      <Image unoptimized height={480} width={640}
         src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg"
         alt="GitHub"
         className="w-10 h-10"
@@ -226,7 +227,7 @@ export function ToolCards() {
   <CardContent className="p-0 space-y-4">
 
     <div className="flex justify-between items-center">
-      <img
+      <Image unoptimized height={480} width={640}
         src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/xd/xd-plain.svg"
         alt="Adobe XD"
         className="w-10 h-10"

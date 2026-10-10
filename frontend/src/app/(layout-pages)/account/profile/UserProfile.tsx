@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,7 +23,7 @@ export default function UserProfile() {
 
                             {/* Profile Image */}
                             <div className="relative -mt-16 flex flex-shrink-0 mt-0">
-                                <img
+                                <Image unoptimized height={480} width={640}
                                     src="https://randomuser.me/api/portraits/men/34.jpg"
                                     alt="John Doe"
                                     className="w-28 h-28 rounded-full border-4 border-background shadow-lg"

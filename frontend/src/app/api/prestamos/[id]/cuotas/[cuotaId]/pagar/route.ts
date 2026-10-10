@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 
@@ -10,7 +11,10 @@ export async function POST(
     const body = await req.json();
     const res = await fetchWithAuth(`/prestamos/${id}/cuotas/${cuotaId}/pagar`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": req.headers.get("idempotency-key") || "",
+      },
       body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -19,7 +23,7 @@ export async function POST(
     }
     const data = await res.json();
     return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al registrar pago de cuota" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error, "Error al registrar pago de cuota") }, { status: 500 });
   }
 }

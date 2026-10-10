@@ -157,29 +157,31 @@ export function extraerDatosPersonalesDeNotas(notas?: string | null): Partial<Fi
 /**
  * Enriquece un objeto socio con sus datos personales más actualizados (nombres, apellidos, DNI, teléfono, dirección).
  */
-export function enriquecerSocioConDatosPersonales<T extends Record<string, any>>(socio: T): T {
+export function enriquecerSocioConDatosPersonales<T extends Record<string, unknown>>(socio: T): T {
   if (!socio) return socio;
-  const dp = extraerDatosPersonalesDeNotas(socio.notas);
+  const dp = extraerDatosPersonalesDeNotas(typeof socio.notas === "string" ? socio.notas : null);
   if (!dp) return socio;
 
-  const nombres = dp.nombres ? String(dp.nombres).trim() : socio.nombres;
-  const apellidos = dp.apellidos ? String(dp.apellidos).trim() : socio.apellidos;
+  const getText = (key: string) => typeof socio[key] === "string" ? socio[key] as string : undefined;
+
+  const nombres = dp.nombres ? String(dp.nombres).trim() : getText("nombres");
+  const apellidos = dp.apellidos ? String(dp.apellidos).trim() : getText("apellidos");
   const nombreCompleto =
     apellidos && nombres
       ? `${apellidos} ${nombres}`.trim()
-      : socio.nombreCompleto;
+      : getText("nombreCompleto");
 
   const dni = dp.dni ? String(dp.dni).trim() : null;
-  const documentoNumero = dni || socio.documentoNumero || socio.numeroDocumento || null;
+  const documentoNumero = dni || getText("documentoNumero") || getText("numeroDocumento") || null;
   const documentoEnmascarado =
     dni ||
-    (socio.documentoEnmascarado && !socio.documentoEnmascarado.startsWith("****00")
-      ? socio.documentoEnmascarado
-      : dni || socio.documentoEnmascarado);
+    (getText("documentoEnmascarado") && !getText("documentoEnmascarado")!.startsWith("****00")
+      ? getText("documentoEnmascarado")
+      : dni || getText("documentoEnmascarado"));
 
-  const telefono = dp.telefono ? String(dp.telefono).trim() : socio.telefono;
-  const email = dp.email ? String(dp.email).trim() : socio.email;
-  const direccion = dp.direccion ? String(dp.direccion).trim() : socio.direccion;
+  const telefono = dp.telefono ? String(dp.telefono).trim() : getText("telefono");
+  const email = dp.email ? String(dp.email).trim() : getText("email");
+  const direccion = dp.direccion ? String(dp.direccion).trim() : getText("direccion");
 
   return {
     ...socio,

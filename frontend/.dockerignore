@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+*.tsbuildinfo
+*.pdf
+check_*.js
+find_*.js
+inspect_*.js
+map_*.js
+parse_*.js

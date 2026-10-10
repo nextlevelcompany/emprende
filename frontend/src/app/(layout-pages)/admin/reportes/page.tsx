@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import {
@@ -6,18 +7,10 @@ import {
   Printer,
   Search,
   User,
-  Calendar,
-  Building2,
   Coins,
-  TrendingUp,
   CreditCard,
-  CheckCircle2,
-  AlertCircle,
   RefreshCw,
   Wallet,
-  ArrowUpRight,
-  ArrowDownRight,
-  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatFecha } from "@/lib/utils";
@@ -25,9 +18,6 @@ import { cn, formatFecha } from "@/lib/utils";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PeriodoItem {
   id: string;
@@ -179,7 +169,7 @@ export default function ReportesPage() {
   const [socios, setSocios] = React.useState<SocioItem[]>([]);
   const [selectedSocioId, setSelectedSocioId] = React.useState<string>("");
   const [reporteSocio, setReporteSocio] = React.useState<ReporteSocio | null>(null);
-  const [isLoadingSocio, setIsLoadingSocio] = React.useState<boolean>(false);
+  const [, setIsLoadingSocio] = React.useState<boolean>(false);
   const [busquedaSocio, setBusquedaSocio] = React.useState<string>("");
 
   // Cargar lista de periodos
@@ -233,8 +223,8 @@ export default function ReportesPage() {
         if (!res.ok) throw new Error("Error al obtener reporte de asamblea");
         const json = await res.json();
         setReporteAsamblea(json);
-      } catch (e: any) {
-        toast.error(e.message || "Error al cargar reporte de asamblea");
+      } catch (e: unknown) {
+        toast.error(getErrorMessage(e, "Error al cargar reporte de asamblea"));
       } finally {
         setIsLoadingAsamblea(false);
       }
@@ -252,8 +242,8 @@ export default function ReportesPage() {
         if (!res.ok) throw new Error("Error al obtener estado de cuenta");
         const json = await res.json();
         setReporteSocio(json);
-      } catch (e: any) {
-        toast.error(e.message || "Error al cargar estado de cuenta");
+      } catch (e: unknown) {
+        toast.error(getErrorMessage(e, "Error al cargar estado de cuenta"));
       } finally {
         setIsLoadingSocio(false);
       }
@@ -361,7 +351,7 @@ export default function ReportesPage() {
               {/* Encabezado Formal del Acta */}
               <div className="border-b pb-4 text-center space-y-1">
                 <h2 className="text-xl font-bold uppercase tracking-wider">
-                  Caja Comunal "Emprende Chambala"
+                   Caja Comunal &quot;Emprende Chambala&quot;
                 </h2>
                 <h3 className="text-sm font-semibold text-primary uppercase">
                   Libro de Caja y Balance Mensual de Asamblea General

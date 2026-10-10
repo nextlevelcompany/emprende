@@ -2,7 +2,7 @@
 
 import { Moon, Sun } from "@boxicons/react"
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useIsMounted } from "@/hooks/use-is-mounted"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -16,11 +16,7 @@ import { useUIThemeStore } from "@/store/ui-theme.store"   // ✅ ADD THIS
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
   const { setTheme: setCustomTheme } = useUIThemeStore()   // ✅ ADD THIS
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useIsMounted()
 
   if (!mounted) return null
 

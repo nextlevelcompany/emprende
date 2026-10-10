@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -73,7 +74,7 @@ export function ActiveProjectsWidget2() {
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg flex items-center justify-center
                                    border border-border">
-                    <img
+                    <Image unoptimized height={480} width={640}
                       src={project.icon}
                       alt={project.name}
                       className="h-6 w-6"

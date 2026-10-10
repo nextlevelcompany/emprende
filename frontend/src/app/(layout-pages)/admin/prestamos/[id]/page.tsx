@@ -1,18 +1,14 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Calendar,
   CheckCircle2,
-  Clock,
   AlertCircle,
   Coins,
-  DollarSign,
-  User,
-  CreditCard,
   Receipt,
   RefreshCw,
   TrendingUp,
@@ -128,6 +124,7 @@ export default function PrestamoDetallePage() {
   const [fechaPago, setFechaPago] = React.useState(new Date().toISOString().split("T")[0]);
   const [observacion, setObservacion] = React.useState("");
   const [cobrando, setCobrando] = React.useState(false);
+  const idempotencyKeyRef = React.useRef<string | null>(null);
   const [descargando, setDescargando] = React.useState(false);
 
   const handleDescargarPDF = async () => {
@@ -136,8 +133,8 @@ export default function PrestamoDetallePage() {
       setDescargando(true);
       await descargarExpedientePrestamoCompletoPDF(id);
       toast.success("Documento de crédito, pagaré y firmas descargado con éxito");
-    } catch (err: any) {
-      toast.error(err?.message || "Error al generar el documento en PDF");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al generar el documento en PDF"));
     } finally {
       setDescargando(false);
     }
@@ -167,8 +164,8 @@ export default function PrestamoDetallePage() {
           setPeriodoCobroId(abierto.id);
         }
       }
-    } catch (e: any) {
-      toast.error(e.message || "Error al cargar préstamo");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Error al cargar préstamo"));
     } finally {
       setLoading(false);
     }
@@ -179,6 +176,7 @@ export default function PrestamoDetallePage() {
   }, [cargarDetalle]);
 
   const abrirModalCobro = (cuota: Cuota) => {
+    idempotencyKeyRef.current = null;
     setCuotaACobrar(cuota);
     setMontoCapital(cuota.saldoCapital.toFixed(2));
     setMontoInteres(cuota.saldoInteres.toFixed(2));
@@ -212,10 +210,12 @@ export default function PrestamoDetallePage() {
     }
 
     setCobrando(true);
+    const idempotencyKey = idempotencyKeyRef.current || crypto.randomUUID();
+    idempotencyKeyRef.current = idempotencyKey;
     try {
       const res = await fetch(`/api/prestamos/${id}/cuotas/${cuotaACobrar.id}/pagar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({
           periodoId: periodoCobroId,
           fechaPago,
@@ -232,10 +232,11 @@ export default function PrestamoDetallePage() {
       }
 
       toast.success(`Cuota #${cuotaACobrar.nroCuota} cobrada con éxito. Se generó el ingreso en caja.`);
+      idempotencyKeyRef.current = null;
       setCuotaACobrar(null);
       cargarDetalle();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Ocurrió un error"));
     } finally {
       setCobrando(false);
     }
@@ -531,7 +532,7 @@ export default function PrestamoDetallePage() {
       </Card>
 
       {/* Modal Cobrar Cuota */}
-      <Dialog open={!!cuotaACobrar} onOpenChange={() => setCuotaACobrar(null)}>
+      <Dialog open={!!cuotaACobrar} onOpenChange={() => { idempotencyKeyRef.current = null; setCuotaACobrar(null); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -648,7 +649,7 @@ export default function PrestamoDetallePage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setCuotaACobrar(null)}
+                onClick={() => { idempotencyKeyRef.current = null; setCuotaACobrar(null); }}
                 disabled={cobrando}
               >
                 Cancelar

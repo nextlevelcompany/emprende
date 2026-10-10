@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getBackendUrl } from "@/lib/api-client";
@@ -5,7 +6,7 @@ import { getBackendUrl } from "@/lib/api-client";
 export async function GET(req: NextRequest) {
   try {
     const cookieStore = await cookies();
-    let accessToken = cookieStore.get("access_token")?.value;
+    const accessToken = cookieStore.get("access_token")?.value;
     const refreshToken = cookieStore.get("refresh_token")?.value;
 
     if (!accessToken && !refreshToken) {
@@ -73,9 +74,9 @@ export async function GET(req: NextRequest) {
     cookieStore.delete("access_token");
     cookieStore.delete("refresh_token");
     return NextResponse.json({ detail: "Sesión expirada" }, { status: 401 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { detail: error?.message || "Error al consultar perfil de usuario" },
+      { detail: getErrorMessage(error, "Error al consultar perfil de usuario") },
       { status: 500 }
     );
   }

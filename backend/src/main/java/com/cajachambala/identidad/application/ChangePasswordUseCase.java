@@ -8,6 +8,8 @@ import com.cajachambala.identidad.infrastructure.persistence.RefreshTokenReposit
 import com.cajachambala.identidad.infrastructure.security.JwtService;
 import com.cajachambala.identidad.infrastructure.security.PasswordService;
 import com.cajachambala.identidad.infrastructure.security.RefreshTokenService;
+import com.cajachambala.identidad.infrastructure.security.AesGcmCryptoService;
+import com.cajachambala.identidad.infrastructure.security.TotpService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,8 @@ public class ChangePasswordUseCase {
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
     private final AuditService auditService;
+    private final TotpService totpService;
+    private final AesGcmCryptoService cryptoService;
 
     public ChangePasswordUseCase(
             AppUserRepository appUserRepository,
@@ -31,7 +35,9 @@ public class ChangePasswordUseCase {
             RefreshTokenRepository refreshTokenRepository,
             RefreshTokenService refreshTokenService,
             JwtService jwtService,
-            AuditService auditService
+            AuditService auditService,
+            TotpService totpService,
+            AesGcmCryptoService cryptoService
     ) {
         this.appUserRepository = appUserRepository;
         this.passwordService = passwordService;
@@ -39,6 +45,8 @@ public class ChangePasswordUseCase {
         this.refreshTokenService = refreshTokenService;
         this.jwtService = jwtService;
         this.auditService = auditService;
+        this.totpService = totpService;
+        this.cryptoService = cryptoService;
     }
 
     @Transactional
@@ -56,6 +64,12 @@ public class ChangePasswordUseCase {
                 auditService.logSecurityEvent(user.getCajaId(), user.getId(), user.getRole(), "PASSWORD_CHANGE_FAILED", "Contraseña actual incorrecta", httpRequest);
                 throw new BadCredentialsException("La contraseña actual proporcionada no es correcta");
             }
+        }
+
+        if (user.isMfaEnabled() && (request.mfaCode() == null || user.getMfaSecretEnc() == null
+                || !totpService.verifyCode(cryptoService.decryptString(user.getMfaSecretEnc()), request.mfaCode()))) {
+            auditService.logSecurityEvent(user.getCajaId(), user.getId(), user.getRole(), "PASSWORD_CHANGE_FAILED", "Código MFA incorrecto o ausente", httpRequest);
+            throw new BadCredentialsException("Debes confirmar el cambio con tu código de autenticación");
         }
 
         if (passwordService.matches(request.newPassword(), user.getPasswordHash())) {

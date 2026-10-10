@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { Calendar, Clock, ArrowRight } from "lucide-react"
 
@@ -14,7 +15,7 @@ export function BlogCards() {
         <div className="group rounded-2xl overflow-hidden bg-card border shadow flex flex-col">
 
           <div className="relative">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/blog/01.jpeg"
               alt="AI in SaaS"
               className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-110"
@@ -58,7 +59,7 @@ export function BlogCards() {
         <div className="group rounded-2xl overflow-hidden bg-card border shadow flex flex-col">
 
           <div className="relative">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/blog/02.jpeg"
               alt="Web3 Growth"
               className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-110"
@@ -102,7 +103,7 @@ export function BlogCards() {
         <div className="group rounded-2xl overflow-hidden bg-card border shadow flex flex-col">
 
           <div className="relative">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/blog/03.jpeg"
               alt="UI Trends"
               className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-110"
@@ -146,7 +147,7 @@ export function BlogCards() {
         <div className="group rounded-2xl overflow-hidden bg-card border shadow flex flex-col">
 
           <div className="relative">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/blog/05.jpeg"
               alt="Startup Growth"
               className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-110"

@@ -1,13 +1,19 @@
-# ----------------------------------------------------------------------
-# Runtime multi-stage con usuario no-root (JAR precompilado)
-# ----------------------------------------------------------------------
+# Build the backend from source so application code and Flyway migrations stay in sync.
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
+WORKDIR /workspace
+
+COPY pom.xml ./pom.xml
+COPY src ./src
+RUN mvn -B -DskipTests package
+
+# Runtime image with a non-root user.
 FROM eclipse-temurin:21-jre-alpine AS runner
 WORKDIR /app
 
 RUN apk add --no-cache curl \
     && addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY target/*.jar app.jar
+COPY --from=build /workspace/target/backend-0.0.1-SNAPSHOT.jar /app/app.jar
 RUN chown -R appuser:appgroup /app
 
 USER appuser

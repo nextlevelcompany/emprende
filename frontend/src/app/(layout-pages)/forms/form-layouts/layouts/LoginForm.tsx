@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -13,12 +13,12 @@ const initialState = {
 
 export default function LoginForm() {
   const [form, setForm] = useState(initialState)
-  const [errors, setErrors] = useState<any>({})
-  const [touched, setTouched] = useState<any>({})
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
+  const [touched, setTouched] = useState<Record<string, boolean | undefined>>({})
   const [showPassword, setShowPassword] = useState(false)
 
   const validate = () => {
-    const newErrors: any = {}
+    const newErrors: Partial<Record<keyof typeof initialState, string>> = {}
 
     if (!form.email) {
       newErrors.email = "Email is required"
@@ -37,15 +37,15 @@ export default function LoginForm() {
   }
 
   const handleChange = (name: string, value: string) => {
-    setForm((prev) => ({ ...prev, [name]: value }))
+    setForm((prev) => ({ ...prev, [name]: value } as typeof initialState))
   }
 
   const handleBlur = (name: string) => {
-    setTouched((prev: any) => ({ ...prev, [name]: true }))
+    setTouched((prev: Record<string, boolean | undefined>) => ({ ...prev, [name]: true }))
     setErrors(validate())
   }
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     const validationErrors = validate()

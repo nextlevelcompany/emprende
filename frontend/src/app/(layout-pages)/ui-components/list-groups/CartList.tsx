@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import { useState } from "react"
 import {
   Card,
@@ -87,7 +88,7 @@ export function CartList() {
             {/* Left Section */}
             <div className="flex items-center gap-4">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-muted p-2">
-                <img
+                <Image unoptimized height={480} width={640}
                   src={item.img}
                   alt={item.title}
                   className="max-h-full object-contain"

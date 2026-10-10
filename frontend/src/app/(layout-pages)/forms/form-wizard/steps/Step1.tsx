@@ -2,6 +2,8 @@
 "use client"
 
 import { Input } from "@/components/ui/input"
+import type { Dispatch, SetStateAction } from "react"
+import type { WizardFormData } from "../types"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -11,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-export default function Step1({ form, setForm }: any) {
+export default function Step1({ form, setForm }: { form: WizardFormData; setForm: Dispatch<SetStateAction<WizardFormData>> }) {
   return (
     <div className="space-y-6 bg-background rounded-2xl shadow border p-8">
 

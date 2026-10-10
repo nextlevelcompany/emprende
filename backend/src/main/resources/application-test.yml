@@ -10,6 +10,22 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    placeholders:
+      rls_context_secret_hex: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
+security:
+  jwt:
+    secret: test_jwt_secret_key_at_least_32_bytes_long
+  crypto:
+    secret: test_aes_key_for_integration_tests_only
+
+app:
+  security:
+    rls-context-hmac-secret-hex: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
+bootstrap:
+  admin:
+    password: Admin12345678#Chambala
 
 logging:
   level:

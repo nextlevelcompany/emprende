@@ -23,7 +23,7 @@ public class JwtService {
     private final long mfaTokenExpirationSeconds = 300; // 5 minutos para resolver MFA
 
     public JwtService(
-            @Value("${security.jwt.secret:${JWT_SECRET:dev_very_secure_secret_key_minimum_256_bits_length_1234567890}}") String secret,
+            @Value("${security.jwt.secret}") String secret,
             @Value("${security.jwt.access-token-expiration-seconds:900}") long accessTokenExpirationSeconds
     ) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
@@ -62,6 +62,7 @@ public class JwtService {
                 .claim("caja", user.getCajaId().toString())
                 .claim("ver", user.getTokenVersion())
                 .claim("type", "MFA_PENDING")
+                .id(UUID.randomUUID().toString())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
                 .signWith(key)
@@ -92,7 +93,17 @@ public class JwtService {
         if (version == null || version != user.getTokenVersion()) {
             return false;
         }
-        return user.getId().toString().equals(claims.getSubject());
+        if (!user.getId().toString().equals(claims.getSubject())) return false;
+
+        String role = claims.get("role", String.class);
+        String caja = claims.get("caja", String.class);
+        String socioId = claims.get("socio_id", String.class);
+        if (role == null || !role.equals(user.getRole().name())
+                || caja == null || !caja.equals(user.getCajaId().toString())) return false;
+
+        UUID persistedSocioId = user.getSocioId();
+        return persistedSocioId == null ? socioId == null || socioId.isBlank()
+                : persistedSocioId.toString().equals(socioId);
     }
 
     public boolean isMfaTokenValid(Claims claims, AppUser user) {

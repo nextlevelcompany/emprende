@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getBackendUrl } from "@/lib/api-client";
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const cookieStore = await cookies();
     const currentRefreshToken = cookieStore.get("refresh_token")?.value;
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     cookieStore.delete("refresh_token");
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ success: true });
   }
 }

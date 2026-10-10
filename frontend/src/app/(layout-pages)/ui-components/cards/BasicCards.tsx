@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import { ArrowRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -18,7 +19,7 @@ export function BasicCards() {
 
                 {/* Card 1 */}
                 <Card className="overflow-hidden rounded-2xl">
-                    <img
+                    <Image unoptimized height={480} width={640}
                         src="/pulse-ui-next/images/cards/basic/01.jpeg"
                         alt="Solana Community"
                         className="w-full h-48 object-cover"
@@ -47,7 +48,7 @@ export function BasicCards() {
 
                 {/* Card 2 */}
                 <Card className="overflow-hidden rounded-2xl">
-                    <img
+                    <Image unoptimized height={480} width={640}
                         src="/pulse-ui-next/images/cards/basic/02.jpeg"
                         alt="Validator"
                         className="w-full h-48 object-cover"
@@ -78,7 +79,7 @@ export function BasicCards() {
 
                 {/* Card 3 */}
                 <Card className="overflow-hidden rounded-2xl">
-                    <img
+                    <Image unoptimized height={480} width={640}
                         src="/pulse-ui-next/images/cards/basic/03.jpeg"
                         alt="Developer Resources"
                         className="w-full h-48 object-cover"
@@ -109,7 +110,7 @@ export function BasicCards() {
 
                 {/* Card 4 */}
                 <Card className="overflow-hidden rounded-2xl">
-                    <img
+                    <Image unoptimized height={480} width={640}
                         src="/pulse-ui-next/images/cards/basic/04.jpeg"
                         alt="Events"
                         className="w-full h-48 object-cover"

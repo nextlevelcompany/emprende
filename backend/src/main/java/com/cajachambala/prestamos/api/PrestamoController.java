@@ -40,7 +40,7 @@ public class PrestamoController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SOCIO')")
     public ResponseEntity<Page<PrestamoResponse>> listar(
             @RequestParam(required = false) UUID socioId,
             @RequestParam(required = false) PrestamoEstado estado,
@@ -100,9 +100,10 @@ public class PrestamoController {
     public ResponseEntity<PrestamoDetalleResponse> registrarPagoCuota(
             @PathVariable UUID id,
             @PathVariable UUID cuotaId,
-            @Valid @RequestBody RegistrarPagoCuotaRequest request
+            @Valid @RequestBody RegistrarPagoCuotaRequest request,
+            @RequestHeader("Idempotency-Key") String idempotencyKey
     ) {
-        PrestamoDetalleResponse response = prestamoService.registrarPagoCuota(id, cuotaId, request);
+        PrestamoDetalleResponse response = prestamoService.registrarPagoCuota(id, cuotaId, request, idempotencyKey);
         return ResponseEntity.ok(response);
     }
 

@@ -1,8 +1,11 @@
 package com.cajachambala.identidad.api;
 
 import com.cajachambala.identidad.application.ChangePasswordUseCase;
+import com.cajachambala.identidad.application.DisableMfaUseCase;
+import com.cajachambala.identidad.application.EmailChangeUseCase;
 import com.cajachambala.identidad.application.LoginUseCase;
 import com.cajachambala.identidad.application.SetupMfaUseCase;
+import com.cajachambala.identidad.application.UpdateAdminProfileUseCase;
 import com.cajachambala.identidad.application.VerifyMfaUseCase;
 import com.cajachambala.identidad.application.dto.AuthDtos.*;
 import com.cajachambala.identidad.domain.AppUser;
@@ -30,6 +33,9 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
     private final AppUserRepository appUserRepository;
+    private final UpdateAdminProfileUseCase updateAdminProfileUseCase;
+    private final DisableMfaUseCase disableMfaUseCase;
+    private final EmailChangeUseCase emailChangeUseCase;
 
     public AuthController(
             LoginUseCase loginUseCase,
@@ -38,7 +44,10 @@ public class AuthController {
             ChangePasswordUseCase changePasswordUseCase,
             RefreshTokenService refreshTokenService,
             JwtService jwtService,
-            AppUserRepository appUserRepository
+            AppUserRepository appUserRepository,
+            UpdateAdminProfileUseCase updateAdminProfileUseCase,
+            DisableMfaUseCase disableMfaUseCase,
+            EmailChangeUseCase emailChangeUseCase
     ) {
         this.loginUseCase = loginUseCase;
         this.verifyMfaUseCase = verifyMfaUseCase;
@@ -47,6 +56,9 @@ public class AuthController {
         this.refreshTokenService = refreshTokenService;
         this.jwtService = jwtService;
         this.appUserRepository = appUserRepository;
+        this.updateAdminProfileUseCase = updateAdminProfileUseCase;
+        this.disableMfaUseCase = disableMfaUseCase;
+        this.emailChangeUseCase = emailChangeUseCase;
     }
 
     @PostMapping("/admin/login")
@@ -101,12 +113,12 @@ public class AuthController {
     }
 
     @PostMapping("/mfa/setup")
-    public ResponseEntity<MfaSetupResponse> setupMfa() {
+    public ResponseEntity<MfaSetupResponse> setupMfa(@RequestBody SetupMfaRequest request, HttpServletRequest httpRequest) {
         UserContext ctx = UserContextHolder.getContext();
         if (ctx == null) {
             throw new BadCredentialsException("No autenticado");
         }
-        MfaSetupResponse response = setupMfaUseCase.initiate(ctx.userId());
+        MfaSetupResponse response = setupMfaUseCase.initiate(ctx.userId(), request, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -118,6 +130,36 @@ public class AuthController {
         }
         MfaConfirmedResponse response = setupMfaUseCase.confirm(ctx.userId(), request, httpRequest);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/admin/profile")
+    public ResponseEntity<Void> updateAdminProfile(@RequestBody UpdateAdminProfileRequest request, HttpServletRequest httpRequest) {
+        UserContext ctx = UserContextHolder.getContext();
+        if (ctx == null) throw new BadCredentialsException("No autenticado");
+        updateAdminProfileUseCase.execute(ctx.userId(), request, httpRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/mfa/disable")
+    public ResponseEntity<Void> disableMfa(@RequestBody DisableMfaRequest request, HttpServletRequest httpRequest) {
+        UserContext ctx = UserContextHolder.getContext();
+        if (ctx == null) throw new BadCredentialsException("No autenticado");
+        disableMfaUseCase.execute(ctx.userId(), request, httpRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/admin/email-change")
+    public ResponseEntity<Void> requestAdminEmailChange(@RequestBody RequestEmailChangeRequest request, HttpServletRequest httpRequest) {
+        UserContext ctx = UserContextHolder.getContext();
+        if (ctx == null) throw new BadCredentialsException("No autenticado");
+        emailChangeUseCase.request(ctx.userId(), request, httpRequest);
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/email-change/confirm")
+    public ResponseEntity<Void> confirmEmailChange(@RequestBody ConfirmEmailChangeRequest request, HttpServletRequest httpRequest) {
+        emailChangeUseCase.confirm(request != null ? request.token() : null, httpRequest);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

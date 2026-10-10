@@ -1,19 +1,14 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
 import {
   TrendingUp,
-  TrendingDown,
-  DollarSign,
   Coins,
   Users,
-  PieChart,
-  Calendar,
   RefreshCw,
   FileText,
-  ShieldCheck,
-  Percent,
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
@@ -43,15 +38,11 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   XAxis,
   YAxis,
@@ -119,13 +110,6 @@ const chartConfigEvolucion = {
   },
 } satisfies ChartConfig;
 
-const chartConfigConceptos = {
-  total: {
-    label: "Monto Acumulado (S/.)",
-    color: "hsl(217, 91%, 60%)",
-  },
-} satisfies ChartConfig;
-
 export default function AnalyticsDashboard() {
   const [data, setData] = React.useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
@@ -139,8 +123,8 @@ export default function AnalyticsDashboard() {
       }
       const json = await res.json();
       setData(json);
-    } catch (err: any) {
-      toast.error(err.message || "Error al cargar datos");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar datos"));
     } finally {
       setIsLoading(false);
     }
@@ -192,7 +176,7 @@ export default function AnalyticsDashboard() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Caja Comunal "Emprende Chambala" - Balance consolidado de ejercicios 2024 y 2025.
+             Caja Comunal &quot;Emprende Chambala&quot; - Balance consolidado de ejercicios 2024 y 2025.
           </p>
         </div>
         <div className="flex items-center gap-2">

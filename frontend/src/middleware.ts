@@ -3,6 +3,19 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Las rutas BFF autentican mediante cookies HttpOnly. Exigir origen propio
+  // en toda operación que pueda modificar estado (incluye login y refresh).
+  if (pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+    const origin = request.headers.get("origin");
+    let sameOrigin = false;
+    if (origin) {
+      try { sameOrigin = new URL(origin).origin === request.nextUrl.origin; } catch { sameOrigin = false; }
+    } else {
+      sameOrigin = request.headers.get("sec-fetch-site") === "same-origin";
+    }
+    if (!sameOrigin) return NextResponse.json({ detail: "Origen de solicitud no permitido" }, { status: 403 });
+  }
   const accessToken = request.cookies.get("access_token")?.value;
   const refreshToken = request.cookies.get("refresh_token")?.value;
 
@@ -65,5 +78,6 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/socio/:path*",
+    "/api/:path*",
   ],
 };

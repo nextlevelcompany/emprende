@@ -1,7 +1,7 @@
 "use client"
  import React from "react"
 import { CircleCheckBig, ShieldHalf, OctagonX, CreditCardIcon, LogOutIcon, SettingsIcon, UserIcon, EllipsisVertical } from "lucide-react"
-import { Label, Pie, PieChart, Cell } from "recharts"
+import { Label, Pie, PieChart } from "recharts"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,

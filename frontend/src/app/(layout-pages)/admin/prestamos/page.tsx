@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
@@ -8,14 +9,9 @@ import {
   Search,
   Filter,
   CheckCircle2,
-  Clock,
   AlertCircle,
   FileText,
-  DollarSign,
   TrendingUp,
-  Calendar,
-  User,
-  ArrowRight,
   ShieldCheck,
   Send,
   RefreshCw,
@@ -37,7 +33,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -257,8 +252,8 @@ export default function PrestamosPage() {
       const data = await res.json();
       setSimulacion(data);
       toast.success("Cronograma simulado calculado con éxito");
-    } catch (e: any) {
-      toast.error(e.message || "Error al generar simulación");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Error al generar simulación"));
     } finally {
       setSimulando(false);
     }
@@ -298,8 +293,8 @@ export default function PrestamosPage() {
       setSimulacion(null);
       setFormProposito("");
       cargarDatos();
-    } catch (e: any) {
-      toast.error(e.message || "Error al registrar el préstamo");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Error al registrar el préstamo"));
     } finally {
       setGuardando(false);
     }
@@ -319,8 +314,8 @@ export default function PrestamosPage() {
       toast.success(`Préstamo #${modalAprobar.numero} aprobado por directiva`);
       setModalAprobar(null);
       cargarDatos();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Ocurrió un error"));
     }
   };
 
@@ -350,8 +345,8 @@ export default function PrestamosPage() {
       toast.success(`Préstamo #${modalDesembolsar.numero} desembolsado. Se generó el egreso en caja.`);
       setModalDesembolsar(null);
       cargarDatos();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Ocurrió un error"));
     } finally {
       setDesembolsando(false);
     }
@@ -642,8 +637,8 @@ export default function PrestamosPage() {
                                 setDescargandoId(p.id);
                                 await descargarExpedientePrestamoCompletoPDF(p.id);
                                 toast.success(`Pagaré y contrato del préstamo #${p.numero} descargado en PDF`);
-                              } catch (err: any) {
-                                toast.error(err?.message || "Error al descargar el PDF");
+                              } catch (err: unknown) {
+                                toast.error(getErrorMessage(err, "Error al descargar el PDF"));
                               } finally {
                                 setDescargandoId(null);
                               }

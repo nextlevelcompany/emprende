@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -38,7 +39,7 @@ export function LanguageDropdown() {
           size="icon"
           className="rounded-full w-10 h-10 hidden md:flex"
         >
-          <img src={`/images/countries/${selected.code}.png`} alt={selected.name}
+          <Image unoptimized height={480} width={640} src={`/images/countries/${selected.code}.png`} alt={selected.name}
            className="absolute h-6 w-6 rounded-full object-cover" />
         </Button>
       </DropdownMenuTrigger>
@@ -56,7 +57,7 @@ export function LanguageDropdown() {
                     selected.code === lang.code && "bg-muted/40"
                 )}
             >
-                <img
+                <Image unoptimized height={480} width={640}
                     src={`/images/countries/${lang.code}.png`}
                     alt={lang.name}
                     className="h-5 w-5 rounded-full object-cover"

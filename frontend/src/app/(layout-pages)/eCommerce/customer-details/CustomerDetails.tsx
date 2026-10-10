@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import {
   Card,
   CardContent,
@@ -7,6 +8,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -15,14 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import {
   ArrowLeft,
   Mail,
@@ -224,7 +218,7 @@ export default function CustomerDetails() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-center">
-                <img
+                <Image unoptimized height={480} width={640}
                   src={customerDetails.image}
                   alt={customerDetails.name}
                   className="h-24 w-24 rounded-full border-2 object-cover"
@@ -264,7 +258,7 @@ export default function CustomerDetails() {
                 <div>
                   <p className="text-xs text-muted-foreground">Country</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <img
+                    <Image unoptimized height={480} width={640}
                       src={`https://flagcdn.com/24x18/${customerDetails.country}.png`}
                       alt={countryData[customerDetails.country]?.name}
                       className="h-4 w-6 rounded-sm"

@@ -29,10 +29,16 @@ public class DistribucionUtilidadController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SOCIO')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<DistribucionResponse> obtenerPorId(@PathVariable UUID id) {
         DistribucionResponse response = distribucionService.obtener(id);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/mi-detalle")
+    @PreAuthorize("hasRole('SOCIO')")
+    public ResponseEntity<DetalleDistribucionResponse> obtenerMiDetalle(@PathVariable UUID id) {
+        return ResponseEntity.ok(distribucionService.obtenerMiDetalle(id));
     }
 
     @GetMapping("/resumen/{ejercicio}")

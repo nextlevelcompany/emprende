@@ -28,13 +28,35 @@ public class AuthDtos {
 
     public record SetupMfaConfirmRequest(
             String secret,
-            String code
+            String code,
+            String currentPassword
     ) {}
+
+    public record SetupMfaRequest(String currentPassword) {}
 
     public record ChangePasswordRequest(
             String currentPassword,
-            String newPassword
+            String newPassword,
+            String mfaCode
     ) {}
+
+    public record UpdateAdminProfileRequest(
+            String currentPassword,
+            String displayName,
+            String phone,
+            String locale,
+            Boolean notificationsEnabled
+    ) {}
+
+    public record RequestEmailChangeRequest(
+            String currentPassword,
+            String mfaCode,
+            String newEmail
+    ) {}
+
+    public record ConfirmEmailChangeRequest(String token) {}
+
+    public record DisableMfaRequest(String currentPassword, String code) {}
 
     public record LoginResponse(
             boolean mfaRequired,
@@ -56,7 +78,9 @@ public class AuthDtos {
 
     public record MfaConfirmedResponse(
             boolean success,
-            List<String> recoveryCodes
+            List<String> recoveryCodes,
+            String accessToken,
+            String refreshToken
     ) {}
 
     public record UserProfileDto(
@@ -67,6 +91,14 @@ public class AuthDtos {
             UserStatus status,
             UUID socioId,
             boolean mustChangePassword,
-            boolean mfaEnabled
+            boolean mfaEnabled,
+            String displayName,
+            String phone,
+            String locale,
+            boolean notificationsEnabled,
+            java.time.Instant passwordChangedAt,
+            java.time.Instant createdAt,
+            java.time.Instant lastLoginAt,
+            String pendingEmail
     ) {}
 }

@@ -1,4 +1,6 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
+import Image from "next/image"
 
 import * as React from "react";
 import Link from "next/link";
@@ -209,8 +211,8 @@ function DetalleSocioContent() {
           return lista[0].id;
         });
       }
-    } catch (err: any) {
-      toast.error(err.message || "Error al obtener socios");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al obtener socios"));
     } finally {
       setLoadingSocios(false);
     }
@@ -234,8 +236,8 @@ function DetalleSocioContent() {
       }
       const data: ReporteSocio = await res.json();
       setReporte(data);
-    } catch (err: any) {
-      toast.error(err.message || "Error al cargar expediente del socio");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar expediente del socio"));
       setReporte(null);
     } finally {
       setLoadingReporte(false);
@@ -1084,7 +1086,7 @@ function DetalleSocioContent() {
                             <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: any) => formatSoles(value)} />
+                        <Tooltip formatter={(value: number | string) => formatSoles(value)} />
                         <Legend wrapperStyle={{ fontSize: "11px" }} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -1115,7 +1117,7 @@ function DetalleSocioContent() {
                         <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                         <XAxis dataKey="name" fontSize={11} tickLine={false} />
                         <YAxis fontSize={11} tickLine={false} />
-                        <Tooltip formatter={(value: any) => formatSoles(value)} />
+                        <Tooltip formatter={(value: number | string) => formatSoles(value)} />
                         <Legend wrapperStyle={{ fontSize: "11px" }} />
                         <Bar dataKey="Solicitado" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Monto Prestado" />
                         <Bar dataKey="Saldo" fill="#ef4444" radius={[4, 4, 0, 0]} name="Saldo Pendiente" />
@@ -1758,9 +1760,9 @@ function DetalleSocioContent() {
                                         await descargarExpedientePrestamoCompletoPDF(p.prestamoId);
                                         toast.dismiss();
                                         toast.success("Documento de crédito, pagaré y firmas descargado con éxito");
-                                      } catch (err: any) {
+                                      } catch (err: unknown) {
                                         toast.dismiss();
-                                        toast.error(err?.message || "Error al descargar el PDF");
+                                        toast.error(getErrorMessage(err, "Error al descargar el PDF"));
                                       }
                                     }}
                                   >
@@ -2013,9 +2015,9 @@ function DetalleSocioContent() {
           <div className="py-2 flex items-center justify-center">
             {docParaVer?.tipo.startsWith("image/") ||
             /\.(jpe?g|png|webp|gif)$/i.test(docParaVer?.nombre || "") ? (
-              <img
-                src={docParaVer?.data}
-                alt={docParaVer?.nombre}
+              <Image unoptimized height={480} width={640}
+                src={docParaVer!.data!}
+                alt={docParaVer!.nombre ?? "Documento"}
                 className="max-h-[75vh] w-auto max-w-full rounded border object-contain shadow-sm"
               />
             ) : docParaVer?.tipo === "application/pdf" ||

@@ -5,8 +5,10 @@ import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import type { Dispatch, SetStateAction } from "react"
+import type { WizardFormData } from "../types"
 
-export default function Step4({ form, setForm }: any) {
+export default function Step4({ form, setForm }: { form: WizardFormData; setForm: Dispatch<SetStateAction<WizardFormData>> }) {
   const [agree, setAgree] = useState(false)
 
   return (

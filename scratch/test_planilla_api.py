@@ -1,10 +1,14 @@
 import urllib.request
 import json
+import os
+
+admin_email = os.environ["ADMIN_EMAIL"]
+admin_password = os.environ["ADMIN_PASSWORD"]
 
 # Login
 login_data = json.dumps({
-    'email': 'admin@cajachambala.pe',
-    'password': 'Admin12345678#Chambala',
+    'email': admin_email,
+    'password': admin_password,
     'portal': 'ADMIN'
 }).encode('utf-8')
 

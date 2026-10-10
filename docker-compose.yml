@@ -6,9 +6,11 @@ services:
     environment:
       POSTGRES_DB: caja_chambala
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}
+      DB_APP_RW_PASSWORD: ${DB_APP_RW_PASSWORD:?DB_APP_RW_PASSWORD is required}
+      DB_APP_RO_PASSWORD: ${DB_APP_RO_PASSWORD:?DB_APP_RO_PASSWORD is required}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/init-db:/docker-entrypoint-initdb.d:ro
@@ -31,12 +33,21 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/caja_chambala
       SPRING_DATASOURCE_USERNAME: app_rw
-      SPRING_DATASOURCE_PASSWORD: dev_password_rw
+      SPRING_DATASOURCE_PASSWORD: ${DB_APP_RW_PASSWORD:?DB_APP_RW_PASSWORD is required}
+      RLS_CONTEXT_HMAC_SECRET_HEX: ${RLS_CONTEXT_HMAC_SECRET_HEX:?RLS_CONTEXT_HMAC_SECRET_HEX is required}
       FLYWAY_URL: jdbc:postgresql://db:5432/caja_chambala
       FLYWAY_USER: postgres
-      FLYWAY_PASSWORD: postgres
+      FLYWAY_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}
       PORT: 8080
-      JWT_SECRET: dev_very_secure_secret_key_minimum_256_bits_length_1234567890
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      AES_GCM_ENCRYPTION_KEY: ${AES_GCM_ENCRYPTION_KEY:?AES_GCM_ENCRYPTION_KEY is required}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:?ADMIN_DEFAULT_PASSWORD is required}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@cajachambala.pe}
+      SMTP_AUTH: ${SMTP_AUTH:-false}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
     ports:
       - "8080:8080"
     healthcheck:

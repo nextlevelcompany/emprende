@@ -4,7 +4,6 @@ import { getBackendUrl } from "./api-client";
 export async function fetchWithAuth(path: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
-  const refreshToken = cookieStore.get("refresh_token")?.value;
 
   const headers = new Headers(options.headers || {});
   if (accessToken) {
@@ -16,10 +15,11 @@ export async function fetchWithAuth(path: string, options: RequestInit = {}) {
     headers,
   });
 
-  // Si no está autorizado o no había token, renovar o autenticar automáticamente
-  if (res.status === 401 || res.status === 403 || !accessToken) {
+  // Si no está autorizado, intentar renovar la sesión existente.
+  if (res.status === 401 && cookieStore.get("refresh_token")?.value) {
     let newAccessToken: string | null = null;
     let newRefreshToken: string | null = null;
+    const refreshToken = cookieStore.get("refresh_token")?.value;
 
     // 1. Intentar rotación por refresh token si existe
     if (refreshToken) {
@@ -33,26 +33,6 @@ export async function fetchWithAuth(path: string, options: RequestInit = {}) {
           const tokenData = await refreshRes.json();
           newAccessToken = tokenData.accessToken;
           newRefreshToken = tokenData.refreshToken || refreshToken;
-        }
-      } catch {}
-    }
-
-    // 2. Si no hay refresh token o falló, auto-login con credenciales de admin por defecto
-    if (!newAccessToken) {
-      try {
-        const loginRes = await fetch(getBackendUrl("/auth/login"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: "admin@cajachambala.pe",
-            password: "Admin12345678#Chambala",
-            portal: "ADMIN",
-          }),
-        });
-        if (loginRes.ok) {
-          const loginData = await loginRes.json();
-          newAccessToken = loginData.accessToken;
-          newRefreshToken = loginData.refreshToken;
         }
       } catch {}
     }

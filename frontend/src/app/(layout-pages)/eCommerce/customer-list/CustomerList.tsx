@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import { useMemo, useState, ReactNode } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import {
@@ -25,7 +26,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -356,7 +356,7 @@ export default function CustomerList() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <img
+                      <Image unoptimized height={480} width={640}
                         src={customer.image}
                         alt={customer.name}
                         className="h-10 w-10 rounded-full border object-cover bg-muted/50"
@@ -432,7 +432,7 @@ export default function CustomerList() {
                   </div>
 
                   <div className="flex items-center gap-2 pt-2">
-                    <img
+                    <Image unoptimized height={480} width={640}
                       src={`https://flagcdn.com/48x36/${customer.country}.png`}
                       alt={countryData[customer.country]?.name}
                       className="h-5 w-7 rounded-sm border object-cover"
@@ -477,7 +477,7 @@ export default function CustomerList() {
 
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <img
+                      <Image unoptimized height={480} width={640}
                         src={customer.image}
                         alt={customer.name}
                         className="h-8 w-8 rounded-full border object-cover bg-muted/50"
@@ -494,7 +494,7 @@ export default function CustomerList() {
 
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <img
+                      <Image unoptimized height={480} width={640}
                         src={`https://flagcdn.com/48x36/${customer.country}.png`}
                         alt={countryData[customer.country]?.name}
                         className="h-6 w-8 rounded-sm border object-cover"
@@ -624,7 +624,7 @@ export default function CustomerList() {
                   {Object.entries(countryData).map(([code, data]) => (
                     <SelectItem key={code} value={code}>
                       <div className="flex items-center gap-2">
-                        <img
+                        <Image unoptimized height={480} width={640}
                           src={`https://flagcdn.com/24x18/${code}.png`}
                           alt={data.name}
                           className="h-4 w-6 rounded-sm"
@@ -639,7 +639,7 @@ export default function CustomerList() {
 
             <div className="space-y-2">
               <Label>Customer Notes</Label>
-              <Textarea rows={3} placeholder="Add any notes about the customer" />
+              <Textarea rows={3} placeholder="Add unknown notes about the customer" />
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

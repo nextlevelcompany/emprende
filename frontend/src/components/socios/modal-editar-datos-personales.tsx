@@ -1,4 +1,6 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
+import Image from "next/image"
 
 import * as React from "react";
 import {
@@ -216,8 +218,8 @@ export function ModalEditarDatosPersonales({
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err: any) {
-      toast.error(err.message || "Error al guardar cambios");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al guardar cambios"));
     } finally {
       setGuardando(false);
     }
@@ -326,7 +328,7 @@ export function ModalEditarDatosPersonales({
                     onValueChange={(val) =>
                       setFicha({
                         ...ficha,
-                        estadoCivil: val === "NONE" ? "" : (val as any),
+                        estadoCivil: val === "NONE" ? "" : (val as FichaDatosPersonales["estadoCivil"]),
                       })
                     }
                   >
@@ -661,9 +663,9 @@ export function ModalEditarDatosPersonales({
           <div className="py-2 flex items-center justify-center">
             {docParaVer?.tipo.startsWith("image/") ||
             /\.(jpe?g|png|webp|gif)$/i.test(docParaVer?.nombre || "") ? (
-              <img
-                src={docParaVer?.data}
-                alt={docParaVer?.nombre}
+              <Image unoptimized height={480} width={640}
+                src={docParaVer!.data!}
+                alt={docParaVer!.nombre ?? "Documento"}
                 className="max-h-[75vh] w-auto max-w-full rounded border object-contain shadow-sm"
               />
             ) : docParaVer?.tipo === "application/pdf" ||

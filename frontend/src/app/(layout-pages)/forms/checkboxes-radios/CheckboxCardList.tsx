@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -75,7 +76,7 @@ export default function CheckboxCardList() {
             <CardContent className="p-5 flex items-center gap-4">
               
               {/* Icon */}
-              <img
+              <Image unoptimized height={480} width={640}
                 src={tool.img}
                 alt={tool.name}
                 className="w-10 h-10 rounded-md object-contain"

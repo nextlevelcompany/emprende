@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,7 +39,7 @@ export function Form() {
                         <div className="flex items-center gap-2">
 
                             {/* First Image */}
-                            <img
+                            <Image unoptimized height={480} width={640}
                                 className="size-5 rounded-full"
                                 src="https://blocks.so/avatar-01.png"
                                 alt="Ephraim Duncan"
@@ -50,7 +51,7 @@ export function Form() {
                     </SelectItem>
                     <SelectItem value="2">
                         <div className="flex items-center gap-2">
-                            <img
+                            <Image unoptimized
                                 className="size-5 rounded-full"
                                 src="https://blocks.so/avatar-03.png"
                                 alt="Lucas Smith"
@@ -62,7 +63,7 @@ export function Form() {
                     </SelectItem>
                     <SelectItem value="3">
                         <div className="flex items-center gap-2">
-                            <img
+                            <Image unoptimized
                                 className="size-5 rounded-full"
                                 src="https://blocks.so/avatar-02.jpg"
                                 alt="Timur Ercan"

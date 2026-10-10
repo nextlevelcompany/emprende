@@ -1,18 +1,14 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import {
   ShieldAlert,
-  Search,
   RefreshCw,
-  Clock,
-  User,
-  Globe,
   FileCode,
   Activity,
   Layers,
   CheckCircle2,
-  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -26,7 +22,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -117,8 +112,8 @@ export default function AuditoriaPage() {
         setTotalElements(data.totalElements || 0);
         setTotalPages(data.totalPages || 0);
         setCurrentPage(page);
-      } catch (err: any) {
-        toast.error(err.message || "Error al cargar registros");
+      } catch (err: unknown) {
+        toast.error(getErrorMessage(err, "Error al cargar registros"));
       } finally {
         setIsLoading(false);
       }

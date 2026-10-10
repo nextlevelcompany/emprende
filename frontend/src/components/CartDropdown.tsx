@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import {
   Cart,
   X,
@@ -130,7 +131,7 @@ export function CartDropdown() {
                 <div className="h-12 w-12 shrink-0 rounded-full bg-muted/50
                     border overflow-hidden flex items-center justify-center p-1">
                     {item.image ? (
-                        <img
+                        <Image unoptimized height={480} width={640}
                             src={item.image}
                             alt={item.title}
                             className="h-full w-full object-contain"

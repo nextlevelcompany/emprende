@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -371,7 +372,7 @@ function ProductImageUploader() {
                 key={index}
                 className="group relative aspect-square overflow-hidden rounded-md border"
               >
-                <img
+                <Image unoptimized height={480} width={640}
                   src={src}
                   alt="Product"
                   className="h-full w-full object-cover"

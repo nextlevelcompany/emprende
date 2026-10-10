@@ -1,9 +1,17 @@
 spring:
   application:
     name: caja-chambala-backend
-  profiles:
-    active: dev
-
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/caja_chambala}
     username: ${SPRING_DATASOURCE_USERNAME:app_rw}
@@ -32,6 +40,8 @@ spring:
     enabled: true
     baseline-on-migrate: false
     locations: classpath:db/migration
+    placeholders:
+      rls_context_secret_hex: ${RLS_CONTEXT_HMAC_SECRET_HEX}
     user: ${FLYWAY_USER:${SPRING_DATASOURCE_USERNAME:postgres}}
     password: ${FLYWAY_PASSWORD:${SPRING_DATASOURCE_PASSWORD:postgres}}
     url: ${FLYWAY_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/caja_chambala}}
@@ -58,11 +68,14 @@ springdoc:
     operationsSorter: method
 
 app:
-  caja-default-id: "a0000000-0000-0000-0000-000000000001"
   security:
+    rls-context-hmac-secret-hex: ${RLS_CONTEXT_HMAC_SECRET_HEX}
     jwt:
-      secret: ${JWT_SECRET:dev_very_secure_secret_key_minimum_256_bits_length_1234567890}
       access-token-expiration-minutes: 15
       refresh-token-expiration-days: 7
     mfa:
       issuer: "Caja Emprende Chambala"
+  mail:
+    from: ${SMTP_FROM:}
+    frontend-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+  caja-default-id: "a0000000-0000-0000-0000-000000000001"

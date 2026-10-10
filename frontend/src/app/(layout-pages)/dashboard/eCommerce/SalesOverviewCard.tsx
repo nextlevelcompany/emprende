@@ -50,17 +50,6 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function SalesOverviewCard() {
-  const [activeChart, setActiveChart] =
-    React.useState<keyof typeof chartConfig>("sales")
-
-  const total = React.useMemo(
-    () => ({
-      sales: chartData.reduce((acc, curr) => acc + curr.sales, 0),
-      profit: chartData.reduce((acc, curr) => acc + curr.profit, 0),
-    }),
-    []
-  )
-
   return (
     <Card>
       <CardContent className="p-6">

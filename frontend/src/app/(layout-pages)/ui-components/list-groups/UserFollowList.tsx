@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { MapPin, MessageCircle } from "lucide-react"
@@ -19,7 +20,7 @@ export function UserFollowList() {
             {/* User 1 */}
             <li className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40 transition">
               <div className="flex items-center gap-4 min-w-0">
-                <img
+                <Image unoptimized height={480} width={640}
                   src="https://randomuser.me/api/portraits/men/32.jpg"
                   alt="John Doe"
                   className="h-10 w-10 shrink-0 rounded-full object-cover"
@@ -43,7 +44,7 @@ export function UserFollowList() {
             {/* User 2 */}
             <li className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40 transition">
               <div className="flex items-center gap-4 min-w-0">
-                <img
+                <Image unoptimized height={480} width={640}
                   src="https://randomuser.me/api/portraits/women/45.jpg"
                   alt="Emma Johnson"
                   className="h-10 w-10 shrink-0 rounded-full object-cover"
@@ -67,7 +68,7 @@ export function UserFollowList() {
             {/* User 3 */}
             <li className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40 transition">
               <div className="flex items-center gap-4 min-w-0">
-                <img
+                <Image unoptimized height={480} width={640}
                   src="https://randomuser.me/api/portraits/men/55.jpg"
                   alt="David Smith"
                   className="h-10 w-10 shrink-0 rounded-full object-cover"
@@ -91,7 +92,7 @@ export function UserFollowList() {
             {/* User 4 */}
             <li className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40 transition">
               <div className="flex items-center gap-4 min-w-0">
-                <img
+                <Image unoptimized height={480} width={640}
                   src="https://randomuser.me/api/portraits/women/66.jpg"
                   alt="Sophia Brown"
                   className="h-10 w-10 shrink-0 rounded-full object-cover"
@@ -115,7 +116,7 @@ export function UserFollowList() {
             {/* User 5 */}
             <li className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40 transition">
               <div className="flex items-center gap-4 min-w-0">
-                <img
+                <Image unoptimized height={480} width={640}
                   src="https://randomuser.me/api/portraits/men/12.jpg"
                   alt="Michael Lee"
                   className="h-10 w-10 shrink-0 rounded-full object-cover"
@@ -138,7 +139,7 @@ export function UserFollowList() {
             {/* User 6 */}
             <li className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40 transition">
                 <div className="flex items-center gap-4 min-w-0">
-                    <img
+                    <Image unoptimized height={480} width={640}
                         src="https://randomuser.me/api/portraits/women/25.jpg"
                         alt="Lily Chen"
                         className="h-10 w-10 shrink-0 rounded-full object-cover"
@@ -161,7 +162,7 @@ export function UserFollowList() {
             {/* User 7 */}
             <li className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40 transition">
                 <div className="flex items-center gap-4 min-w-0">
-                    <img
+                    <Image unoptimized height={480} width={640}
                         src="https://randomuser.me/api/portraits/men/41.jpg"
                         alt="Daniel Carter"
                         className="h-10 w-10 shrink-0 rounded-full object-cover"
@@ -184,7 +185,7 @@ export function UserFollowList() {
             {/* User 8 */}
             <li className="flex items-center justify-between gap-4 p-4 hover:bg-muted/40 transition">
                 <div className="flex items-center gap-4 min-w-0">
-                    <img
+                    <Image unoptimized height={480} width={640}
                         src="https://randomuser.me/api/portraits/women/52.jpg"
                         alt="Olivia Martinez"
                         className="h-10 w-10 shrink-0 rounded-full object-cover"

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 
@@ -16,8 +17,8 @@ export async function GET(
       data = { detail: text || "Respuesta no JSON" };
     }
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al obtener planilla mensual" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al obtener planilla mensual") }, { status: 500 });
   }
 }
 
@@ -41,7 +42,7 @@ export async function POST(
       data = { detail: text || "Respuesta no JSON" };
     }
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al guardar planilla mensual" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al guardar planilla mensual") }, { status: 500 });
   }
 }

@@ -893,6 +893,137 @@ export function descargarDocumentoPrestamoPDF(params: {
   doc.save(`Expediente_Credito_${numStr}_${nombreLimpio}.pdf`);
 }
 
+/** Descarga únicamente el cronograma vigente, con el estado y pagos registrados al momento. */
+export function descargarCronogramaPrestamoPDF(params: {
+  prestamo: {
+    numero?: number;
+    socioNombreCompleto: string;
+    montoPrincipal: number;
+    tasaMensual: number;
+    nroCuotas: number;
+    estado: string;
+    metodoAmortizacion?: string;
+  };
+  cronograma: Array<{
+    nroCuota: number;
+    fechaVencimiento?: string;
+    capitalProgramado?: number;
+    interesProgramado?: number;
+    cuotaProgramada?: number;
+    capitalPagado?: number;
+    interesPagado?: number;
+    moraPagada?: number;
+    saldoCapital?: number;
+    totalPendiente?: number;
+    estado?: string;
+    fechaPago?: string | null;
+  }>;
+  empresa?: EmpresaPDFData | null;
+}): void {
+  const { prestamo, cronograma, empresa } = params;
+  if (!cronograma.length) throw new Error("El préstamo no tiene un cronograma disponible.");
+
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 12;
+  const formatMonto = (value?: number) =>
+    `S/ ${Number(value || 0).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatDate = (value?: string | null) => value ? formatFecha(value) : "—";
+  const numero = prestamo.numero ? String(prestamo.numero).padStart(6, "0") : "—";
+
+  doc.setFont("times", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(30, 58, 138);
+  doc.text((empresa?.nombreComercial || "UNIÓN DE CRÉDITO Y AHORRO (UNICA)").toUpperCase(), margin, 17);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42);
+  doc.text("CRONOGRAMA ACTUAL DE PAGOS", margin, 25);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`${(empresa?.nombre || "CAJA COMUNAL EMPRENDE CHAMBALA").toUpperCase()} · Préstamo N.º ${numero}`, margin, 31);
+  doc.text(`Socio: ${prestamo.socioNombreCompleto}`, margin, 37);
+  doc.text(
+    `Principal: ${formatMonto(prestamo.montoPrincipal)}   Tasa mensual: ${(Number(prestamo.tasaMensual || 0) * 100).toFixed(2)}%   Cuotas: ${cronograma.length}   Estado: ${prestamo.estado}`,
+    margin,
+    43
+  );
+
+  const totalCapital = cronograma.reduce((sum, cuota) => sum + Number(cuota.capitalProgramado || 0), 0);
+  const totalInteres = cronograma.reduce((sum, cuota) => sum + Number(cuota.interesProgramado || 0), 0);
+  const totalCuota = cronograma.reduce((sum, cuota) => sum + Number(cuota.cuotaProgramada || 0), 0);
+  const totalCapitalPagado = cronograma.reduce((sum, cuota) => sum + Number(cuota.capitalPagado || 0), 0);
+  const totalInteresPagado = cronograma.reduce((sum, cuota) => sum + Number(cuota.interesPagado || 0), 0);
+  const totalMora = cronograma.reduce((sum, cuota) => sum + Number(cuota.moraPagada || 0), 0);
+
+  autoTable(doc, {
+    startY: 48,
+    margin: { left: margin, right: margin, bottom: 13 },
+    head: [["Cuota", "Vencimiento", "Capital", "Interés", "Cuota", "Capital pagado", "Interés pagado", "Mora pagada", "Saldo capital", "Estado", "Fecha de pago"]],
+    body: cronograma.map((cuota) => [
+      String(cuota.nroCuota),
+      formatDate(cuota.fechaVencimiento),
+      formatMonto(cuota.capitalProgramado),
+      formatMonto(cuota.interesProgramado),
+      formatMonto(cuota.cuotaProgramada),
+      formatMonto(cuota.capitalPagado),
+      formatMonto(cuota.interesPagado),
+      formatMonto(cuota.moraPagada),
+      formatMonto(cuota.saldoCapital),
+      cuota.estado || "PENDIENTE",
+      formatDate(cuota.fechaPago),
+    ]),
+    foot: [[
+      "TOTALES", `${cronograma.length} cuotas`, formatMonto(totalCapital), formatMonto(totalInteres),
+      formatMonto(totalCuota), formatMonto(totalCapitalPagado), formatMonto(totalInteresPagado),
+      formatMonto(totalMora), "—", prestamo.estado, "—",
+    ]],
+    theme: "grid",
+    styles: { font: "helvetica", fontSize: 7, cellPadding: 1.8, textColor: [31, 41, 55], valign: "middle", lineColor: [226, 232, 240], lineWidth: 0.2 },
+    headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: "bold", halign: "center", fontSize: 7 },
+    footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: "bold", fontSize: 7 },
+    columnStyles: {
+      0: { halign: "center" },
+      1: { halign: "center" },
+      2: { halign: "right" },
+      3: { halign: "right" },
+      4: { halign: "right", fontStyle: "bold" },
+      5: { halign: "right" },
+      6: { halign: "right" },
+      7: { halign: "right" },
+      8: { halign: "right" },
+      9: { halign: "center", fontStyle: "bold" },
+      10: { halign: "center" },
+    },
+    didParseCell: (data) => {
+      if (data.section === "body" && data.column.index === 9) {
+        const state = String(data.cell.raw);
+        if (state === "PAGADA") data.cell.styles.textColor = [16, 185, 129];
+        else if (state === "VENCIDA") data.cell.styles.textColor = [220, 38, 38];
+        else if (state === "PARCIAL") data.cell.styles.textColor = [37, 99, 235];
+        else data.cell.styles.textColor = [217, 119, 6];
+      }
+    },
+    didDrawPage: () => {
+      const pageNumber = doc.getCurrentPageInfo().pageNumber;
+      const totalPages = doc.getNumberOfPages();
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text(
+        `${empresa?.nombreComercial || "Caja Emprende Chambala"} · Cronograma vigente · Página ${pageNumber} de ${totalPages}`,
+        pageWidth - margin,
+        doc.internal.pageSize.getHeight() - 6,
+        { align: "right" }
+      );
+    },
+  });
+
+  const nombre = limpiarNombreArchivo(prestamo.socioNombreCompleto || "Socio");
+  doc.save(`Cronograma_Prestamo_${numero}_${nombre}.pdf`);
+}
+
 /**
  * Función integral que obtiene de manera automática todos los datos necesarios
  * (préstamo, cronograma, socio enriquecido, directiva oficial y empresa) y descarga el PDF.

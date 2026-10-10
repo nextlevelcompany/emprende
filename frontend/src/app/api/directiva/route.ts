@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 
@@ -9,8 +10,8 @@ export async function GET(req: NextRequest) {
     const backendRes = await fetchWithAuth(`/directiva${query}`);
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al listar cargos de directiva" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al listar cargos de directiva") }, { status: 500 });
   }
 }
 
@@ -24,8 +25,8 @@ export async function PUT(req: NextRequest) {
     });
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al actualizar cargos de directiva" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al actualizar cargos de directiva") }, { status: 500 });
   }
 }
 
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     });
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al guardar cargos de directiva" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al guardar cargos de directiva") }, { status: 500 });
   }
 }

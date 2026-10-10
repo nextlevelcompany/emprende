@@ -1,20 +1,14 @@
 "use client"
 
-import { Users, 
-  ShoppingCart,
+import {
   EllipsisVertical,
   LogOutIcon,
   SettingsIcon,
   CreditCardIcon,
   UserIcon,
-  CreditCard,
-  OctagonX,
-  ShieldHalf,
-  CircleCheckBig,
   ChartNoAxesCombined,
   GalleryVerticalEnd,} from "lucide-react"
 import { CartesianGrid, Line, LineChart, XAxis } from "recharts"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
@@ -29,7 +23,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"

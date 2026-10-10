@@ -1,5 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { CreditCardIcon, LogOutIcon, SettingsIcon, UserIcon, EllipsisVertical, MoreVertical, ArrowUpRight, ArrowDownRight, ChevronUp, ChevronDown  } from "lucide-react"
+import Image from "next/image"
+import { Card, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
+import { CreditCardIcon, LogOutIcon, SettingsIcon, UserIcon, EllipsisVertical, ChevronUp, ChevronDown  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -114,7 +115,7 @@ export default function SalesByCountriesCard() {
           >
             {/* Flag + Info */}
             <div className="flex items-center gap-3">
-              <img
+              <Image unoptimized height={480} width={640}
                 src={item.flag}
                 alt={item.country}
                 className="h-9 w-9 rounded-full object-cover border"

@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import { useState } from "react"
 import {
   Card,
@@ -109,7 +110,7 @@ export function PaymentHistory() {
               >
                 {/* Left Section */}
                 <div className="flex items-center gap-4 min-w-0">
-                  <img
+                  <Image unoptimized height={480} width={640}
                     src={payment.avatar}
                     alt={payment.name}
                     className="h-11 w-11 shrink-0 rounded-full object-cover"

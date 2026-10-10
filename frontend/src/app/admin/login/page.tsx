@@ -1,8 +1,9 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Shield, KeyRound, Lock, Mail, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
+import { Shield, KeyRound, Lock, Mail, AlertCircle, ArrowRight } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,8 @@ function LoginFormContent() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/admin/socios";
 
-  const [email, setEmail] = useState("admin@cajachambala.pe");
-  const [password, setPassword] = useState("Admin12345678#Chambala");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,8 +45,8 @@ function LoginFormContent() {
         router.push(from);
         router.refresh();
       }
-    } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Error al iniciar sesión"));
     } finally {
       setLoading(false);
     }
@@ -73,16 +74,11 @@ function LoginFormContent() {
 
       router.push(from);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Error al verificar código MFA");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Error al verificar código MFA"));
     } finally {
       setLoading(false);
     }
-  };
-
-  const prefillAdmin = () => {
-    setEmail("admin@cajachambala.pe");
-    setPassword("Admin12345678#Chambala");
   };
 
   return (
@@ -153,16 +149,6 @@ function LoginFormContent() {
                 )}
               </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={prefillAdmin}
-                className="w-full text-xs text-muted-foreground gap-1.5 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
-                Rellenar credenciales de Administrador inicial
-              </Button>
             </form>
           ) : (
             <form onSubmit={handleMfaSubmit} className="space-y-4">

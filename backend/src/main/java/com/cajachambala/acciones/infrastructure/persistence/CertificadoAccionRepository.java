@@ -2,6 +2,7 @@ package com.cajachambala.acciones.infrastructure.persistence;
 
 import com.cajachambala.acciones.domain.CertificadoAccion;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -20,6 +21,10 @@ public interface CertificadoAccionRepository extends JpaRepository<CertificadoAc
     List<CertificadoAccion> findByCajaIdAndEstadoOrderBySerieInicioAsc(UUID cajaId, String estado);
 
     Optional<CertificadoAccion> findByIdAndCajaId(UUID id, UUID cajaId);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from CertificadoAccion c where c.id = :id and c.cajaId = :cajaId")
+    Optional<CertificadoAccion> findByIdAndCajaIdForUpdate(@Param("id") UUID id, @Param("cajaId") UUID cajaId);
 
     @Query("SELECT COALESCE(MAX(c.numeroCertificado), 0) FROM CertificadoAccion c WHERE c.cajaId = :cajaId")
     Integer findMaxNumeroCertificadoByCajaId(@Param("cajaId") UUID cajaId);

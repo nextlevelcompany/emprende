@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -27,7 +28,7 @@ export default function WelcomeBannerCard() {
         </div>
         {/* Right Illustration */}
         <div className="hidden lg:flex items-center justify-end">
-          <img
+          <Image unoptimized height={480} width={640}
             src="https://codervent.com/pulse-ui/illustrations/graphic-designer-workplace-1.png"
             alt="Analytics illustration"
             className="max-h-32 md:max-h-48 lg:max-h-48"

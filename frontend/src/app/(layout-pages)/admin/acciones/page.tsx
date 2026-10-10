@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
@@ -10,12 +11,9 @@ import {
   RefreshCw,
   TrendingUp,
   Calendar,
-  CheckCircle2,
-  Clock,
   Coins,
   ShieldCheck,
   Building2,
-  Eye,
   FileCheck,
   FileDown,
   FileText,
@@ -91,6 +89,17 @@ interface ResumenSocioAcciones {
   totalCertificados: number;
   seriesRangosTexto: string;
   porcentajeParticipacion: number;
+}
+
+interface SocioAccionesApi {
+  socioId: string;
+  socioCodigo: number;
+  socioNombre: string;
+  socioEstado: string;
+  totalAcciones?: number;
+  capitalSocial?: number;
+  totalCertificados?: number;
+  rangosSeries?: string[];
 }
 
 interface CertificadoAccion {
@@ -208,17 +217,17 @@ export default function AccionesPage() {
 
       if (resResumen && !resResumen.detail) setResumen(resResumen);
       if (Array.isArray(resSocios)) {
-        const totalActivas = resResumen?.totalAccionesActivas || 2246;
-        const mapped: ResumenSocioAcciones[] = resSocios.map((s: any) => ({
+        const totalActivas = Number(resResumen?.totalAccionesActivas) || 2246;
+        const mapped: ResumenSocioAcciones[] = (resSocios as SocioAccionesApi[]).map((s) => ({
           socioId: s.socioId,
           socioCodigo: s.socioCodigo,
           socioNombre: s.socioNombre,
           socioEstado: s.socioEstado,
-          totalAccionesActivas: s.totalAcciones ?? 0,
-          totalCapitalAportado: s.capitalSocial ?? 0,
-          totalCertificados: s.totalCertificados ?? 0,
+          totalAccionesActivas: Number(s.totalAcciones) || 0,
+          totalCapitalAportado: Number(s.capitalSocial) || 0,
+          totalCertificados: Number(s.totalCertificados) || 0,
           seriesRangosTexto: Array.isArray(s.rangosSeries) ? s.rangosSeries.join(", ") : "",
-          porcentajeParticipacion: totalActivas > 0 ? ((s.totalAcciones ?? 0) / totalActivas) * 100 : 0,
+          porcentajeParticipacion: totalActivas > 0 ? ((Number(s.totalAcciones) || 0) / totalActivas) * 100 : 0,
         }));
         setSocios(mapped);
       }
@@ -226,7 +235,7 @@ export default function AccionesPage() {
       if (Array.isArray(resTrans)) setTransferencias(resTrans);
       if (Array.isArray(resDirectiva)) setDirectiva(resDirectiva);
       if (resEmpresa && !resEmpresa.detail) setEmpresa(resEmpresa);
-    } catch (err: any) {
+    } catch {
       toast.error("Error al cargar datos de matrícula de acciones");
     } finally {
       setLoading(false);
@@ -305,8 +314,8 @@ export default function AccionesPage() {
       toast.success(`Transferencia #${data.numeroTransferencia} registrada exitosamente`);
       setModalTransferencia(false);
       await cargarDatos();
-    } catch (err: any) {
-      toast.error(err.message || "Error al procesar transferencia");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al procesar transferencia"));
     } finally {
       setGuardandoTransferencia(false);
     }
@@ -376,8 +385,8 @@ export default function AccionesPage() {
         );
       }
       setModalDescargaFechas(false);
-    } catch (err: any) {
-      toast.error("Error al generar el archivo PDF: " + (err?.message || "error desconocido"));
+    } catch (err: unknown) {
+      toast.error("Error al generar el archivo PDF: " + (getErrorMessage(err, "error desconocido")));
     }
   };
 
@@ -685,7 +694,7 @@ export default function AccionesPage() {
                                           ? `Certificado de ${nombreSocio} descargado en PDF`
                                           : `${certsConNombre.length} certificados de ${nombreSocio} descargados en PDF`
                                       );
-                                    } catch (err: any) {
+                                    } catch {
                                       toast.error("Error al generar el PDF del certificado");
                                     }
                                   }}
@@ -905,7 +914,7 @@ export default function AccionesPage() {
                                   toast.success(
                                     `Certificado CERT-${String(c.numeroCertificado).padStart(6, "0")} descargado en PDF`
                                   );
-                                } catch (err: any) {
+                                } catch {
                                   toast.error("Error al generar el PDF del certificado");
                                 }
                               }}

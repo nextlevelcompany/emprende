@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -30,8 +31,8 @@ export default function SocioLoginPage() {
       }
 
       router.push("/socio/mi-cuenta");
-    } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Error al iniciar sesión"));
     } finally {
       setLoading(false);
     }

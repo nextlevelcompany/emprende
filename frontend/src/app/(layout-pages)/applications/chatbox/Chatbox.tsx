@@ -221,7 +221,7 @@ export default function ChatBox() {
             {/* Sent Message */}
             <div className="flex justify-end">
               <div className="bg-primary text-primary-foreground rounded-lg rounded-tr-none px-4 py-2 max-w-xs lg:max-w-md shadow">
-                <p className="text-sm">I'm good, thanks! How about you?</p>
+                 <p className="text-sm">I&apos;m good, thanks! How about you?</p>
                 <span className="text-xs opacity-70 block text-right mt-1">9:35 PM</span>
               </div>
             </div>
@@ -245,7 +245,7 @@ export default function ChatBox() {
             {/* Received Message */}
             <div className="flex justify-start">
               <div className="bg-background rounded-lg rounded-tl-none px-4 py-2 max-w-xs lg:max-w-md shadow">
-                <p className="text-sm">Yeah, it's tough but worth it. Anyway, did you finish that project?</p>
+                 <p className="text-sm">Yeah, it&apos;s tough but worth it. Anyway, did you finish that project?</p>
                 <span className="text-xs text-muted-foreground block text-right mt-1">9:39 PM</span>
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function ChatBox() {
             {/* Received Message */}
             <div className="flex justify-start">
               <div className="bg-background rounded-lg rounded-tl-none px-4 py-2 max-w-xs lg:max-w-md shadow">
-                <p className="text-sm">Cool 😎 Send it over when you're done — I'll take a look!</p>
+                 <p className="text-sm">Cool 😎 Send it over when you&apos;re done — I&apos;ll take a look!</p>
                 <span className="text-xs text-muted-foreground block text-right mt-1">9:41 PM</span>
               </div>
             </div>

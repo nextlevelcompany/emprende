@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 
@@ -19,8 +20,8 @@ export async function PUT(
     }
     const data = await res.json();
     return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al editar préstamo" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error, "Error al editar préstamo") }, { status: 500 });
   }
 }
 
@@ -41,7 +42,7 @@ export async function DELETE(
       return NextResponse.json({ error: err }, { status: res.status });
     }
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al eliminar préstamo" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error, "Error al eliminar préstamo") }, { status: 500 });
   }
 }

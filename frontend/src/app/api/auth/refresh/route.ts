@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getBackendUrl } from "@/lib/api-client";
@@ -58,9 +59,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { detail: error?.message || "Error al refrescar token" },
+      { detail: getErrorMessage(error, "Error al refrescar token") },
       { status: 500 }
     );
   }

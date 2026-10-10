@@ -1,4 +1,6 @@
 "use client";
+import Image from "next/image"
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import {
@@ -217,8 +219,8 @@ export default function EmpresaPage() {
         const dataAcc = await resAccionistas.json();
         setAccionistas(Array.isArray(dataAcc) ? dataAcc : []);
       }
-    } catch (err: any) {
-      toast.error(err.message || "Error al cargar información institucional");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al cargar información institucional"));
     } finally {
       setLoading(false);
     }
@@ -265,8 +267,8 @@ export default function EmpresaPage() {
       setEmpresa(data);
       setModalEditarEmpresa(false);
       toast.success("Datos generales de la empresa actualizados correctamente");
-    } catch (err: any) {
-      toast.error(err.message || "Error al guardar");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al guardar"));
     } finally {
       setGuardando(false);
     }
@@ -337,8 +339,8 @@ export default function EmpresaPage() {
       setModalActa(null);
       setModalCrearActa(false);
       cargarTodo();
-    } catch (err: any) {
-      toast.error(err.message || "Error al guardar acta");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al guardar acta"));
     } finally {
       setGuardando(false);
     }
@@ -352,8 +354,8 @@ export default function EmpresaPage() {
       if (!res.ok) throw new Error("Error al eliminar acta");
       toast.success(`${numero} eliminada`);
       cargarTodo();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     }
   };
 
@@ -379,8 +381,8 @@ export default function EmpresaPage() {
       setModalAccionista(null);
       setModalCrearAccionista(false);
       cargarTodo();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setGuardando(false);
     }
@@ -394,8 +396,8 @@ export default function EmpresaPage() {
       if (!res.ok) throw new Error("Error al eliminar accionista");
       toast.success(`Accionista ${nombre} eliminado`);
       cargarTodo();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     }
   };
 
@@ -583,7 +585,7 @@ export default function EmpresaPage() {
                   <div className="relative group">
                     <div className="h-20 w-20 rounded-2xl border-2 border-primary/20 bg-background flex items-center justify-center overflow-hidden shadow-sm">
                       {empresa?.logo ? (
-                        <img
+                        <Image unoptimized height={480} width={640}
                           src={empresa.logo}
                           alt="Logo de la Empresa"
                           className="h-full w-full object-contain p-1"
@@ -1202,7 +1204,7 @@ export default function EmpresaPage() {
                   <Label className="text-sm font-semibold">Logotipo Institucional</Label>
                   <div className="h-28 w-28 rounded-2xl border-2 border-dashed border-primary/30 bg-muted/20 flex flex-col items-center justify-center relative overflow-hidden group">
                     {formEmpresa.logo ? (
-                      <img src={formEmpresa.logo} alt="Logo" className="h-full w-full object-contain p-2" />
+                      <Image unoptimized height={480} width={640} src={formEmpresa.logo} alt="Logo" className="h-full w-full object-contain p-2" />
                     ) : (
                       <div className="flex flex-col items-center justify-center text-muted-foreground p-2 text-center">
                         <ImageIcon className="h-8 w-8 mb-1" />
@@ -1542,12 +1544,12 @@ export default function EmpresaPage() {
                   <Label className="text-sm font-semibold">Tipo de Reunión *</Label>
                   <Select
                     value={formActa.tipo}
-                    onValueChange={(val: any) => {
+                    onValueChange={(val) => {
                       let titulo = "Asamblea General Ordinaria";
                       if (val === "EXTRAORDINARIA") titulo = "Asamblea General Extraordinaria";
                       if (val === "MENSUAL") titulo = "Reunión Mensual de Caja Comunal";
                       if (val === "DIRECTIVA") titulo = "Sesión de Junta Directiva";
-                      setFormActa({ ...formActa, tipo: val, tipoTitulo: titulo });
+                      setFormActa({ ...formActa, tipo: val as typeof formActa.tipo, tipoTitulo: titulo });
                     }}
                   >
                     <SelectTrigger className="h-10 text-sm">
@@ -1888,7 +1890,7 @@ export default function EmpresaPage() {
                 <Label className="text-xs font-semibold">Estado Actual</Label>
                 <Select
                   value={formAccionista.estado}
-                  onValueChange={(val: any) => setFormAccionista({ ...formAccionista, estado: val })}
+                  onValueChange={(val) => setFormAccionista({ ...formAccionista, estado: val as typeof formAccionista.estado })}
                 >
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue />
@@ -1964,9 +1966,9 @@ export default function EmpresaPage() {
           <div className="py-2 flex items-center justify-center">
             {docParaVer?.tipo.startsWith("image/") ||
             /\.(jpe?g|png|webp|gif)$/i.test(docParaVer?.nombre || "") ? (
-              <img
-                src={docParaVer?.data}
-                alt={docParaVer?.nombre}
+              <Image unoptimized height={480} width={640}
+                src={docParaVer!.data!}
+                alt={docParaVer!.nombre ?? "Documento"}
                 className="max-h-[75vh] w-auto max-w-full rounded border object-contain shadow-sm"
               />
             ) : docParaVer?.tipo === "application/pdf" ||

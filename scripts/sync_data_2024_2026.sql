@@ -4,6 +4,25 @@
 -- ====================================================================
 BEGIN;
 
+-- Salvaguarda: este archivo borra y reconstruye datos contables. Antes de
+-- ejecutarlo, habilita explícitamente la sesión y confirma que solo exista
+-- la caja objetivo en esta base. No descomentes esta opción en producción.
+-- SET app.allow_destructive_sync = 'true';
+DO $$
+DECLARE
+  caja_count integer;
+BEGIN
+  IF current_setting('app.allow_destructive_sync', true) IS DISTINCT FROM 'true' THEN
+    RAISE EXCEPTION 'Sincronización detenida: habilita app.allow_destructive_sync=true tras revisar el respaldo y el destino';
+  END IF;
+  SELECT count(*) INTO caja_count FROM caja;
+  IF caja_count <> 1 OR NOT EXISTS (
+    SELECT 1 FROM caja WHERE id = 'a0000000-0000-0000-0000-000000000001'
+  ) THEN
+    RAISE EXCEPTION 'Sincronización detenida: se esperaba únicamente la caja objetivo; encontradas % cajas', caja_count;
+  END IF;
+END $$;
+
 -- Desactivar triggers temporales para carga masiva
 ALTER TABLE operacion DISABLE TRIGGER trg_operacion_periodo_cerrado;
 ALTER TABLE operacion_detalle DISABLE TRIGGER trg_detalle_periodo_cerrado;

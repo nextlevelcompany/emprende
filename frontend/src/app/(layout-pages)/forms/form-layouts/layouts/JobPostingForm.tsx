@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,11 +31,11 @@ const initialState = {
 
 export default function JobPostingForm() {
   const [form, setForm] = useState(initialState)
-  const [errors, setErrors] = useState<any>({})
-  const [touched, setTouched] = useState<any>({})
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
+  const [touched, setTouched] = useState<Record<string, boolean | undefined>>({})
 
   const validate = () => {
-    const newErrors: any = {}
+    const newErrors: Partial<Record<keyof typeof initialState, string>> = {}
 
     if (!form.jobTitle) newErrors.jobTitle = "Job title is required"
     if (!form.companyName) newErrors.companyName = "Company name is required"
@@ -66,16 +66,16 @@ export default function JobPostingForm() {
     return newErrors
   }
 
-  const handleChange = (name: string, value: any) => {
-    setForm((prev) => ({ ...prev, [name]: value }))
+  const handleChange = (name: string, value: string | boolean) => {
+    setForm((prev) => ({ ...prev, [name]: value } as typeof initialState))
   }
 
   const handleBlur = (name: string) => {
-    setTouched((prev: any) => ({ ...prev, [name]: true }))
+    setTouched((prev: Record<string, boolean | undefined>) => ({ ...prev, [name]: true }))
     setErrors(validate())
   }
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const validationErrors = validate()
     setErrors(validationErrors)
@@ -134,7 +134,7 @@ export default function JobPostingForm() {
                   </Label>
                   <Input
                     placeholder={`Enter ${field}`}
-                    value={(form as any)[field]}
+                    value={String(form[field as keyof typeof initialState])}
                     onChange={(e) =>
                       handleChange(field, e.target.value)
                     }
@@ -230,7 +230,7 @@ export default function JobPostingForm() {
                   <Input
                     type="number"
                     placeholder="Enter amount"
-                    value={(form as any)[field]}
+                    value={String(form[field as keyof typeof initialState])}
                     onChange={(e) =>
                       handleChange(field, e.target.value)
                     }

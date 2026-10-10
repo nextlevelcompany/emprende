@@ -34,7 +34,7 @@ public class AccionController {
     }
 
     @GetMapping("/certificados")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SOCIO')")
     public ResponseEntity<List<CertificadoAccionDto>> listarCertificados(
             @RequestParam(required = false) UUID socioId,
             @RequestParam(required = false) String estado,

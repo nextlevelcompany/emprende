@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { useMemo, useState } from "react"
 import { Search } from "lucide-react"
@@ -111,7 +112,7 @@ export const trafficTableData = [
 
 export default function TrafficTable() {
   const [search, setSearch] = useState("")
-  const [sortKey, setSortKey] = useState<"month" | "desktop" | "mobile">("month")
+  const [sortKey] = useState<"month" | "desktop" | "mobile">("month")
   const [page, setPage] = useState(1)
 
   const pageSize = 5
@@ -190,7 +191,7 @@ export default function TrafficTable() {
                   {/* Source with image */}
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <img
+                      <Image unoptimized height={480} width={640}
                         src={row.icon}
                         alt={row.source}
                         className="h-9 w-9 rounded-xl border p-1 object-contain bg-muted/50"

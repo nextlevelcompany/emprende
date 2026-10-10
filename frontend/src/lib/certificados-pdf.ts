@@ -44,7 +44,7 @@ export interface EmpresaPDFData {
   pais?: string;
   representanteLegal?: string;
   cargoRepresentante?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export function numeroALetras(num: number): string {

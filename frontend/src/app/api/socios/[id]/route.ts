@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 import { enriquecerSocioConDatosPersonales } from "@/lib/socios-datos-personales";
@@ -19,8 +20,8 @@ export async function GET(
         Expires: "0",
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al obtener socio" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al obtener socio") }, { status: 500 });
   }
 }
 
@@ -31,14 +32,16 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { numeroDocumento, documentoNumero, ...backendPayload } = body || {};
+    const backendPayload = { ...(body || {}) };
+    delete backendPayload.numeroDocumento;
+    delete backendPayload.documentoNumero;
     const backendRes = await fetchWithAuth(`/socios/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(backendPayload),
     });
     const data = await backendRes.json();
-    let enriched = data && !data.detail ? enriquecerSocioConDatosPersonales(data) : data;
+    const enriched = data && !data.detail ? enriquecerSocioConDatosPersonales(data) : data;
 
     // Garantizar que si el usuario envió nombres o DNI actualizados, se devuelvan de inmediato
     if (enriched && typeof enriched === "object" && !enriched.detail && body) {
@@ -63,7 +66,7 @@ export async function PUT(
         Expires: "0",
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al actualizar socio" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al actualizar socio") }, { status: 500 });
   }
 }

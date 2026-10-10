@@ -1,13 +1,11 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
 import {
-  PieChart,
+
   PlusCircle,
-  Search,
-  CheckCircle2,
-  Clock,
   AlertCircle,
   TrendingUp,
   Coins,
@@ -17,7 +15,6 @@ import {
   Calculator,
   ShieldCheck,
   FileText,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatFecha } from "@/lib/utils";
@@ -117,7 +114,7 @@ interface PeriodoSimple {
 
 export default function UtilidadesPage() {
   const [distribuciones, setDistribuciones] = React.useState<Distribucion[]>([]);
-  const [resumen, setResumen] = React.useState<ResumenEjercicio | null>(null);
+  const [, setResumen] = React.useState<ResumenEjercicio | null>(null);
   const [socios, setSocios] = React.useState<SocioSimple[]>([]);
   const [periodos, setPeriodos] = React.useState<PeriodoSimple[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -221,8 +218,8 @@ export default function UtilidadesPage() {
       const data = await res.json();
       setSimulacion(data);
       toast.success("Simulación de reparto calculada exitosamente");
-    } catch (e: any) {
-      toast.error(e.message || "Error al simular");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Error al simular"));
     } finally {
       setSimulando(false);
     }
@@ -263,8 +260,8 @@ export default function UtilidadesPage() {
       setModalNuevo(false);
       setSimulacion(null);
       cargarDatos();
-    } catch (e: any) {
-      toast.error(e.message || "Error al guardar distribución");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Error al guardar distribución"));
     } finally {
       setGuardando(false);
     }
@@ -283,8 +280,8 @@ export default function UtilidadesPage() {
       toast.success(`Distribución del ejercicio ${modalAprobar.ejercicio} aprobada`);
       setModalAprobar(null);
       cargarDatos();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Ocurrió un error"));
     }
   };
 
@@ -313,8 +310,8 @@ export default function UtilidadesPage() {
       toast.success(`Utilidades del ejercicio ${modalPagar.ejercicio} pagadas. Se generaron los egresos contables.`);
       setModalPagar(null);
       cargarDatos();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Ocurrió un error"));
     } finally {
       setPagando(false);
     }

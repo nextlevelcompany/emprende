@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { useState } from "react"
 
@@ -167,7 +168,7 @@ export default function ProjectTable() {
                     {/* Project */}
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <img
+                        <Image unoptimized height={480} width={640}
                           src={project.icon}
                           alt={project.name}
                           className="w-11 h-11 rounded-full border p-1 bg-muted/20"
@@ -190,7 +191,7 @@ export default function ProjectTable() {
                     <TableCell>
                       <div className="flex items-center">
                         {project.team.map((member, idx) => (
-                          <img
+                          <Image unoptimized height={480} width={640}
                             key={idx}
                             src={member}
                             alt="member"

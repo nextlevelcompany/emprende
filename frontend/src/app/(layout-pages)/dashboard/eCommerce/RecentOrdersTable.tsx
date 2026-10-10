@@ -1,7 +1,8 @@
 "use client"
+import Image from "next/image"
 
 import { useMemo, useState } from "react"
-import { Search, MoreVertical, Star, LogOutIcon, SettingsIcon, CreditCardIcon, UserIcon, EllipsisVertical } from "lucide-react"
+import { Search, MoreVertical, LogOutIcon, SettingsIcon, CreditCardIcon, UserIcon, EllipsisVertical } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -283,8 +284,9 @@ const filteredOrders = useMemo(() => {
 
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <img
+                    <Image unoptimized height={480} width={640}
                       src={order.image}
+                      alt={`${order.name} product`}
                       className="h-11 w-11 shrink-0 rounded-full object-cover"
                     />
                     <div>

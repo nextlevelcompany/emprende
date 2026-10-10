@@ -36,6 +36,7 @@ import {
   Zap,
   Apple
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 /* ---------------------------------- */
 /* Data */
@@ -114,7 +115,7 @@ const STATUS_STYLES: Record<string, string> = {
 /* Icon Mapping */
 /* ---------------------------------- */
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   "Google Chrome": Chrome,
   Safari: Compass,
   "Mozilla Firefox": Globe,

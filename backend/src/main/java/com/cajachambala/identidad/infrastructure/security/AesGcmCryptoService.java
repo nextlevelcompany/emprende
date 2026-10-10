@@ -22,7 +22,7 @@ public class AesGcmCryptoService {
     private final SecretKey secretKey;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public AesGcmCryptoService(@Value("${security.crypto.secret:${JWT_SECRET:dev_very_secure_secret_key_minimum_256_bits_length_1234567890}}") String rawKey) {
+    public AesGcmCryptoService(@Value("${security.crypto.secret}") String rawKey) {
         try {
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
             byte[] keyBytes = sha256.digest(rawKey.getBytes(StandardCharsets.UTF_8));

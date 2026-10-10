@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 import { enriquecerSocioConDatosPersonales } from "@/lib/socios-datos-personales";
@@ -34,8 +35,8 @@ export async function GET(req: NextRequest) {
         Expires: "0",
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al listar socios" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al listar socios") }, { status: 500 });
   }
 }
 
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
       data = { detail: text || "Respuesta no JSON del servidor" };
     }
     return NextResponse.json(data, { status: backendRes.status });
-  } catch (error: any) {
-    return NextResponse.json({ detail: error?.message || "Error al crear socio" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ detail: getErrorMessage(error, "Error al crear socio") }, { status: 500 });
   }
 }

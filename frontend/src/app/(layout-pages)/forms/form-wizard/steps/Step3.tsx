@@ -3,8 +3,10 @@
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import type { Dispatch, SetStateAction } from "react"
+import type { WizardFormData } from "../types"
 
-export default function Step3({ form, setForm }: any) {
+export default function Step3({ form, setForm }: { form: WizardFormData; setForm: Dispatch<SetStateAction<WizardFormData>> }) {
   return (
     <div className="space-y-6 bg-background rounded-2xl shadow border p-8">
 

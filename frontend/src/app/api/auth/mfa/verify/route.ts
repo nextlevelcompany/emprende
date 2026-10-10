@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getBackendUrl } from "@/lib/api-client";
@@ -54,11 +55,11 @@ export async function POST(req: NextRequest) {
       success: true,
       user: data.user,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
       {
         title: "Error de Servidor BFF",
-        detail: error?.message || "No fue posible verificar el código MFA",
+        detail: getErrorMessage(error, "No fue posible verificar el código MFA"),
       },
       { status: 500 }
     );

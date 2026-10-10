@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import { useMemo, useState, ReactNode } from "react"
 import {
   Eye,
@@ -382,7 +383,7 @@ export default function OrderList() {
 
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <img
+                      <Image unoptimized height={480} width={640}
                         src={order.customerImage}
                         alt={order.customerName}
                         className="h-8 w-8 rounded-full border object-cover bg-muted/50"
@@ -534,7 +535,7 @@ export default function OrderList() {
 
             <div className="space-y-2">
               <Label>Order Notes</Label>
-              <Textarea rows={3} placeholder="Add any notes about the order" />
+              <Textarea rows={3} placeholder="Add unknown notes about the order" />
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

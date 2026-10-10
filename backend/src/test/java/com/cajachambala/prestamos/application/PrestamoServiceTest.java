@@ -234,7 +234,7 @@ class PrestamoServiceTest {
                 "Pago total de cuota única"
         );
 
-        PrestamoDetalleResponse response = prestamoService.registrarPagoCuota(prestamoId, cuotaId, req);
+        PrestamoDetalleResponse response = prestamoService.registrarPagoCuota(prestamoId, cuotaId, req, "test-cobro-cuota");
 
         // Al haber pagado la totalidad de la única cuota, el préstamo debe pasar a CANCELADO
         assertThat(response.prestamo().estado()).isEqualTo(PrestamoEstado.CANCELADO);

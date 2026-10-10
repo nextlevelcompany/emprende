@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import {
   Table,
@@ -171,7 +172,7 @@ export default function ProductTable() {
               {products.map((prod) => (
                 <TableRow key={prod.id} className="hover:bg-muted/40 transition">
                   <TableCell>
-                        <img
+                        <Image unoptimized height={480} width={640}
                             src={prod.image}
                             alt={prod.name}
                             className="w-12 h-12 object-cover rounded-lg border p-1"

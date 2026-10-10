@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 
@@ -10,9 +11,9 @@ export async function GET() {
     }
     const data = await res.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Error al obtener métricas del dashboard" },
+      { error: getErrorMessage(error, "Error al obtener métricas del dashboard") },
       { status: 500 }
     );
   }

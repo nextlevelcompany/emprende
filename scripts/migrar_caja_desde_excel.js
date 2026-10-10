@@ -4,8 +4,13 @@ const xlsx = require('../frontend/node_modules/xlsx');
 
 const API_BASE = 'http://localhost:8080/api/v1';
 const EXCEL_PATH = 'C:\\Proyectos\\Emprende\\Datos Emprende\\Libro CAJA EMPRENDE CHAMBALA 2024 -2025 ACTUALIZADO (3).xls';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 async function main() {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    throw new Error('Define ADMIN_EMAIL y ADMIN_PASSWORD en el entorno antes de ejecutar la migración.');
+  }
   console.log('=== INICIANDO MIGRACIÓN OFICIAL DEL LIBRO DE CAJA EMPRENDE CHAMBALA ===');
 
   // 1. Iniciar sesión como ADMIN
@@ -14,8 +19,8 @@ async function main() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'admin@cajachambala.pe',
-      password: 'Admin12345678#Chambala',
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
       portal: 'ADMIN',
     }),
   });

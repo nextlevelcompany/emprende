@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import Image from "next/image"
+import { Card, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CreditCardIcon, LogOutIcon, SettingsIcon, UserIcon, EllipsisVertical} from "lucide-react"
 import {
@@ -123,7 +124,7 @@ export default function PopularProductsCard() {
             className="flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <img
+              <Image unoptimized height={480} width={640}
                 src={product.image}
                 alt={product.name}
                 className="h-12 w-12 rounded-lg object-cover p-1 bg-muted/70"

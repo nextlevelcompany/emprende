@@ -27,6 +27,7 @@ import {
   Apple,
   Tickets
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 /* ---------------------------------- */
 /* Data */
@@ -61,7 +62,7 @@ const STATUS_STYLES: Record<string, string> = {
 /* Icon + Color Helpers */
 /* ---------------------------------- */
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   YouTube: Youtube,
   "John Doe": UserIcon,
   "Sans Brothers": CreditCardIcon,

@@ -1,4 +1,4 @@
-const xlsx = require('xlsx');
+import xlsx from 'xlsx';
 
 const filePath = 'c:\\Proyectos\\Emprende\\Datos Emprende\\Libro CAJA EMPRENDE CHAMBALA 2024 -2025 ACTUALIZADO (3).xls';
 const wb = xlsx.readFile(filePath);
@@ -35,7 +35,6 @@ monthlySheets.forEach(sheetName => {
     const egresoFecha = row[10];
     const retirosAhorros = Number(row[12]) || 0;
     const prestamo = Number(row[13]) || 0;
-    const interesPagado = Number(row[14]) || 0;
     const gastosAdmin = Number(row[15]) || 0;
     const utilidadDistrib = Number(row[16]) || 0;
     const otros = Number(row[17]) || 0;

@@ -1,0 +1,1 @@
+ALTER TYPE token_proposito ADD VALUE 'MFA_CHALLENGE';

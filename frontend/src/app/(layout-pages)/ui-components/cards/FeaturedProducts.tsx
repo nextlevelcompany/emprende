@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 
 import { ShoppingCart, Heart } from "lucide-react"
 
@@ -13,7 +14,7 @@ export function FeaturedProducts() {
         {/* Product 1 */}
         <div className="rounded-3xl overflow-hidden bg-card border shadow hover:shadow-xl hover:-translate-y-2 transition-all duration-500">
           <div className="bg-indigo-100 dark:bg-indigo-500/10 p-8 flex items-center justify-center">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/eComm/01.png"
               alt="Wireless Headphones"
               className="h-40 object-contain"
@@ -61,7 +62,7 @@ export function FeaturedProducts() {
         {/* Product 2 */}
         <div className="rounded-3xl overflow-hidden bg-card border shadow hover:shadow-xl hover:-translate-y-2 transition-all duration-500">
           <div className="bg-cyan-100 dark:bg-cyan-500/10 p-8 flex items-center justify-center">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/eComm/02.png"
               alt="Smartwatch Pro"
               className="h-40 object-contain"
@@ -107,7 +108,7 @@ export function FeaturedProducts() {
         {/* Product 3 */}
         <div className="rounded-3xl overflow-hidden bg-card border shadow hover:shadow-xl hover:-translate-y-2 transition-all duration-500">
           <div className="bg-pink-100 dark:bg-pink-500/10 p-8 flex items-center justify-center">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/eComm/03.png"
               alt="Portable Speaker"
               className="h-40 object-contain"
@@ -155,7 +156,7 @@ export function FeaturedProducts() {
         {/* Product 4 */}
         <div className="rounded-3xl overflow-hidden bg-card border shadow hover:shadow-xl hover:-translate-y-2 transition-all duration-500">
           <div className="bg-amber-100 dark:bg-amber-500/10 p-8 flex items-center justify-center">
-            <img
+            <Image unoptimized height={480} width={640}
               src="/pulse-ui-next/images/cards/eComm/04.png"
               alt="Noise Cancelling Earbuds"
               className="h-40 object-contain"

@@ -45,7 +45,7 @@ import {
 
 import { SlidersHorizontal } from "lucide-react"
 
-import { FileDown, Printer } from "lucide-react"
+import {  Printer } from "lucide-react"
 import * as XLSX from "xlsx"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -60,6 +60,9 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  // TanStack Table exposes mutable table functions that React Compiler cannot memoize safely.
+  "use no memo"
+
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState("")
   const [rowSelection, setRowSelection] = useState({})
@@ -67,8 +70,6 @@ export function DataTable<TData, TValue>({
     pageIndex: 0,
     pageSize: 10,
   })
-
-  const [columnFilters, setColumnFilters] = useState([])
 
   const table = useReactTable({
     data,
@@ -78,9 +79,7 @@ export function DataTable<TData, TValue>({
       globalFilter,
       rowSelection,
       pagination,
-      columnFilters,   // 👈 add this
     },
-    // onColumnFiltersChange: setColumnFilters, // 👈 add this
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,

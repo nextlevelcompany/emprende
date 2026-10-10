@@ -1,3 +1,4 @@
+import Image from "next/image"
 import {
     Card,
     CardContent,
@@ -117,7 +118,7 @@ export function BasicListGroups() {
 
                             <li className="flex gap-4 p-4">
                                 <div className="flex shrink-0 h-12 w-12 items-center justify-center rounded-xl border bg-muted/50">
-                                    <img
+                                    <Image unoptimized height={480} width={640}
                                         src="/pulse-ui-next/images/cards/eComm/01.png"
                                         alt="Wireless Headphones"
                                         className="h-12 w-12 object-contain"
@@ -133,7 +134,7 @@ export function BasicListGroups() {
 
                             <li className="flex gap-4 p-4">
                                 <div className="flex shrink-0 h-12 w-12 items-center justify-center rounded-xl border bg-muted/30">
-                                    <img
+                                    <Image unoptimized height={480} width={640}
                                         src="/pulse-ui-next/images/cards/eComm/02.png"
                                         alt="Smartwatch Pro"
                                         className="h-12 w-12 object-contain"
@@ -149,7 +150,7 @@ export function BasicListGroups() {
 
                             <li className="flex gap-4 p-4">
                                 <div className="flex shrink-0 h-12 w-12 items-center justify-center rounded-xl border bg-muted/30">
-                                    <img
+                                    <Image unoptimized height={480} width={640}
                                         src="/pulse-ui-next/images/cards/eComm/03.png"
                                         alt="RGB Gaming Mouse"
                                         className="h-12 w-12 object-contain"
@@ -165,7 +166,7 @@ export function BasicListGroups() {
 
                             <li className="flex gap-4 p-4">
                                 <div className="flex shrink-0 h-12 w-12 items-center justify-center rounded-xl border bg-muted/30">
-                                    <img
+                                    <Image unoptimized height={480} width={640}
                                         src="/pulse-ui-next/images/cards/eComm/04.png"
                                         alt="iPhone 16"
                                         className="h-12 w-12 object-contain"
@@ -181,7 +182,7 @@ export function BasicListGroups() {
 
                             <li className="flex gap-4 p-4 rounded-b-2xl">
                                 <div className="flex shrink-0 h-12 w-12 items-center justify-center rounded-xl border bg-muted/30">
-                                    <img
+                                    <Image unoptimized height={480} width={640}
                                         src="/pulse-ui-next/images/cards/eComm/05.png"
                                         alt="DSLR Camera"
                                         className="h-12 w-12 object-contain"
@@ -212,7 +213,7 @@ function ListItem({
     desc,
     iconClass,
     isLast,
-}: any) {
+}: { icon: React.ReactNode; title: string; desc: string; iconClass: string; isLast?: boolean }) {
     return (
         <li
             className={`flex gap-4 p-4 ${isLast ? "rounded-b-2xl" : ""

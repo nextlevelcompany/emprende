@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/error-message";
 
 import * as React from "react";
 import Link from "next/link";
@@ -17,11 +18,16 @@ import {
   RefreshCw,
   Copy,
   Edit,
-  UserCheck,
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatFecha } from "@/lib/utils";
+
+function generarPasswordTemporal(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
 
 import { ModalEditarDatosPersonales } from "@/components/socios/modal-editar-datos-personales";
 import { extraerObservaciones } from "@/lib/socios-datos-personales";
@@ -132,8 +138,8 @@ export default function SociosPage() {
       const data = await res.json();
       const lista = Array.isArray(data) ? data : data.content || [];
       setSocios(lista);
-    } catch (err: any) {
-      toast.error(err.message || "Error al conectar con el servidor");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Error al conectar con el servidor"));
     } finally {
       setLoading(false);
     }
@@ -196,8 +202,8 @@ export default function SociosPage() {
         notas: "",
       });
       cargarSocios();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setGuardando(false);
     }
@@ -223,8 +229,8 @@ export default function SociosPage() {
       setModalBaja(null);
       setFormBaja({ fechaRetiro: new Date().toISOString().split("T")[0], motivo: "" });
       cargarSocios();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setGuardando(false);
     }
@@ -249,8 +255,8 @@ export default function SociosPage() {
       toast.success(`Acceso web habilitado exitosamente para ${modalAcceso.nombreCompleto}`);
       setModalAcceso(null);
       cargarSocios();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Ocurrió un error"));
     } finally {
       setGuardando(false);
     }
@@ -266,7 +272,7 @@ export default function SociosPage() {
             Padrón Oficial de Socios
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Caja Comunal "Emprende Chambala" &bull; Cifrado AES-256-GCM y control de acceso web
+             Caja Comunal &quot;Emprende Chambala&quot; &bull; Cifrado AES-256-GCM y control de acceso web
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -502,7 +508,7 @@ export default function SociosPage() {
                             setModalAcceso(s);
                             setFormAcceso({
                               email: s.email || "",
-                              passwordTemporal: `Socio${s.codigo}#Chambala2026`,
+                              passwordTemporal: generarPasswordTemporal(),
                             });
                           }}
                           className="h-7 text-xs text-primary gap-1 px-2"

@@ -24,6 +24,27 @@ public class AppUser {
     @Column(nullable = false, unique = true, columnDefinition = "citext")
     private String email;
 
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
+    @Column(length = 30)
+    private String phone;
+
+    @Column(nullable = false, length = 20)
+    private String locale = "es-PE";
+
+    @Column(name = "notifications_enabled", nullable = false)
+    private boolean notificationsEnabled = true;
+
+    @Column(name = "pending_email", columnDefinition = "citext")
+    private String pendingEmail;
+
+    @Column(name = "email_change_token_hash", length = 64)
+    private String emailChangeTokenHash;
+
+    @Column(name = "email_change_expires_at")
+    private Instant emailChangeExpiresAt;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -113,6 +134,10 @@ public class AppUser {
         return false;
     }
 
+    public boolean isAuthenticationAllowed() {
+        return this.status == UserStatus.ACTIVO && !isAccountLocked();
+    }
+
     public void recordFailedLogin(int maxFailedAttempts, Duration lockDuration) {
         this.failedLoginCount++;
         if (this.failedLoginCount >= maxFailedAttempts) {
@@ -146,10 +171,43 @@ public class AppUser {
         this.updatedAt = Instant.now();
     }
 
+    public void updateProfile(String displayName, String phone, String locale, boolean notificationsEnabled) {
+        this.displayName = displayName;
+        this.phone = phone;
+        this.locale = locale;
+        this.notificationsEnabled = notificationsEnabled;
+        this.updatedAt = Instant.now();
+    }
+
+    public void requestEmailChange(String newEmail, String tokenHash, Instant expiresAt) {
+        this.pendingEmail = newEmail.toLowerCase().trim();
+        this.emailChangeTokenHash = tokenHash;
+        this.emailChangeExpiresAt = expiresAt;
+        this.updatedAt = Instant.now();
+    }
+
+    public void confirmEmailChange() {
+        if (this.pendingEmail == null) throw new IllegalStateException("No hay un cambio de correo pendiente");
+        this.email = this.pendingEmail;
+        this.pendingEmail = null;
+        this.emailChangeTokenHash = null;
+        this.emailChangeExpiresAt = null;
+        this.tokenVersion++;
+        this.updatedAt = Instant.now();
+    }
+
+    public void cancelEmailChange() {
+        this.pendingEmail = null;
+        this.emailChangeTokenHash = null;
+        this.emailChangeExpiresAt = null;
+        this.updatedAt = Instant.now();
+    }
+
     public void enableMfa(byte[] secretEnc, List<String> recoveryHashes) {
         this.mfaSecretEnc = secretEnc;
         this.mfaRecoveryHashes = new ArrayList<>(recoveryHashes);
         this.mfaEnabled = true;
+        this.tokenVersion++;
         this.updatedAt = Instant.now();
     }
 
@@ -173,6 +231,13 @@ public class AppUser {
     public UUID getId() { return id; }
     public UUID getCajaId() { return cajaId; }
     public String getEmail() { return email; }
+    public String getDisplayName() { return displayName; }
+    public String getPhone() { return phone; }
+    public String getLocale() { return locale; }
+    public boolean isNotificationsEnabled() { return notificationsEnabled; }
+    public String getPendingEmail() { return pendingEmail; }
+    public String getEmailChangeTokenHash() { return emailChangeTokenHash; }
+    public Instant getEmailChangeExpiresAt() { return emailChangeExpiresAt; }
     public String getPasswordHash() { return passwordHash; }
     public UserRole getRole() { return role; }
     public UserStatus getStatus() { return status; }

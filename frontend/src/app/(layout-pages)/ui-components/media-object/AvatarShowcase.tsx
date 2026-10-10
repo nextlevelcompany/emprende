@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function AvatarShowcase() {
@@ -16,9 +17,9 @@ export default function AvatarShowcase() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4 flex-wrap">
-                <img src="https://randomuser.me/api/portraits/women/1.jpg" className="h-24 w-24 rounded-full shadow p-1" />
-                <img src="https://randomuser.me/api/portraits/men/2.jpg" className="h-24 w-24 rounded-full shadow p-1" />
-                <img src="https://randomuser.me/api/portraits/men/3.jpg" className="h-24 w-24 rounded-full shadow p-1" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/women/1.jpg" className="h-24 w-24 rounded-full shadow p-1" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/men/2.jpg" className="h-24 w-24 rounded-full shadow p-1" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/men/3.jpg" className="h-24 w-24 rounded-full shadow p-1" />
               </div>
             </CardContent>
           </Card>
@@ -30,9 +31,9 @@ export default function AvatarShowcase() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4 flex-wrap">
-                <img src="https://randomuser.me/api/portraits/women/8.jpg" className="h-24 w-24 rounded-full shadow p-1 bg-blue-500" />
-                <img src="https://randomuser.me/api/portraits/men/9.jpg" className="h-24 w-24 rounded-full shadow p-1 bg-red-500" />
-                <img src="https://randomuser.me/api/portraits/women/10.jpg" className="h-24 w-24 rounded-full shadow p-1 bg-green-500" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/women/8.jpg" className="h-24 w-24 rounded-full shadow p-1 bg-blue-500" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/men/9.jpg" className="h-24 w-24 rounded-full shadow p-1 bg-red-500" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/women/10.jpg" className="h-24 w-24 rounded-full shadow p-1 bg-green-500" />
               </div>
             </CardContent>
           </Card>
@@ -44,19 +45,19 @@ export default function AvatarShowcase() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4 flex-wrap">
-                <img src="https://randomuser.me/api/portraits/women/8.jpg" className="h-[35px] w-[35px] rounded-full shadow border" />
-                <img src="https://randomuser.me/api/portraits/men/9.jpg" className="h-[40px] w-[40px] rounded-full shadow border" />
-                <img src="https://randomuser.me/api/portraits/women/10.jpg" className="h-[45px] w-[45px] rounded-full shadow border" />
-                <img src="https://randomuser.me/api/portraits/men/18.jpg" className="h-[50px] w-[50px] rounded-full shadow border" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/women/8.jpg" className="h-[35px] w-[35px] rounded-full shadow border" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/men/9.jpg" className="h-[40px] w-[40px] rounded-full shadow border" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/women/10.jpg" className="h-[45px] w-[45px] rounded-full shadow border" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/men/18.jpg" className="h-[50px] w-[50px] rounded-full shadow border" />
               </div>
 
               <CardTitle className="mt-6">Shapes</CardTitle>
 
               <div className="flex items-center gap-4 flex-wrap mt-4">
-                <img src="https://randomuser.me/api/portraits/women/8.jpg" className="h-[35px] w-[35px] rounded-none shadow" />
-                <img src="https://randomuser.me/api/portraits/men/9.jpg" className="h-[40px] w-[40px] rounded-lg shadow" />
-                <img src="https://randomuser.me/api/portraits/women/10.jpg" className="h-[45px] w-[45px] rounded-full shadow" />
-                <img src="https://randomuser.me/api/portraits/women/19.jpg" className="h-[50px] w-[50px] rounded-full shadow" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/women/8.jpg" className="h-[35px] w-[35px] rounded-none shadow" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/men/9.jpg" className="h-[40px] w-[40px] rounded-lg shadow" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/women/10.jpg" className="h-[45px] w-[45px] rounded-full shadow" />
+                <Image unoptimized height={480} width={640} alt="" src="https://randomuser.me/api/portraits/women/19.jpg" className="h-[50px] w-[50px] rounded-full shadow" />
               </div>
             </CardContent>
           </Card>
@@ -74,17 +75,17 @@ export default function AvatarShowcase() {
             <CardContent>
               <div className="flex items-center">
 
-                <img
+                <Image unoptimized height={480} width={640} alt=""
                   src="https://randomuser.me/api/portraits/women/1.jpg"
                   className="h-12 w-12 rounded-full border-2 border-white shadow"
                 />
 
-                <img
+                <Image unoptimized height={480} width={640} alt=""
                   src="https://randomuser.me/api/portraits/men/2.jpg"
                   className="h-12 w-12 rounded-full border-2 border-white shadow -ml-3"
                 />
 
-                <img
+                <Image unoptimized height={480} width={640} alt=""
                   src="https://randomuser.me/api/portraits/men/3.jpg"
                   className="h-12 w-12 rounded-full border-2 border-white shadow -ml-3"
                 />

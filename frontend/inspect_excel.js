@@ -1,5 +1,4 @@
-const xlsx = require('xlsx');
-const path = require('path');
+import xlsx from 'xlsx';
 
 const filePath = 'c:\\Proyectos\\Emprende\\Datos Emprende\\Libro CAJA EMPRENDE CHAMBALA 2024 -2025 ACTUALIZADO (3).xls';
 const wb = xlsx.readFile(filePath);
@@ -7,7 +6,6 @@ const wb = xlsx.readFile(filePath);
 console.log('=== WORKBOOK ANALYSIS ===');
 console.log('Total Sheets:', wb.SheetNames.length);
 
-const years = ['24', '25', '2025', '2026', '26'];
 
 const targetSheets = wb.SheetNames.filter(name => {
   const n = name.trim().toUpperCase();

@@ -1,4 +1,5 @@
 "use client"
+import Image from "next/image"
 import {
   Card,
   CardContent,
@@ -25,10 +26,6 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   ArrowLeft,
-  Truck,
-  CreditCard,
-  User,
-  Package,
   Download,
   FileText,
   Printer,
@@ -74,19 +71,6 @@ const order = {
       image: "/pulse-ui-next/products/04.png",
     },
   ],
-}
-
-const statusClass = (status: string) => {
-  switch (status) {
-    case "Completed":
-      return "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400"
-    case "Pending":
-      return "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400"
-    case "Cancelled":
-      return "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400"
-    default:
-      return "bg-muted text-muted-foreground"
-  }
 }
 
 export default function OrderDetails() {
@@ -168,7 +152,7 @@ export default function OrderDetails() {
                         <TableRow key={idx}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <img
+                              <Image unoptimized height={480} width={640}
                                 src={item.image}
                                 alt={item.name}
                                 className="h-11 w-11 rounded-full border object-cover p-1 bg-muted/50"
@@ -210,7 +194,7 @@ export default function OrderDetails() {
                   <CardTitle>Customer</CardTitle>
                 </CardHeader>
                 <CardContent className="flex items-center gap-3">
-                  <img
+                  <Image unoptimized height={480} width={640}
                     src={order.customer.avatar}
                     alt={order.customer.name}
                     className="h-14 w-14 rounded-full border object-cover"

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/lib/error-message";
 import { NextResponse } from "next/server";
 import { fetchWithAuth } from "@/lib/bff-client";
 
@@ -12,9 +13,9 @@ export async function GET() {
     const entidades = resEntidades.ok ? await resEntidades.json() : [];
 
     return NextResponse.json({ acciones, entidades });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Error al obtener filtros de auditoría" },
+      { error: getErrorMessage(error, "Error al obtener filtros de auditoría") },
       { status: 500 }
     );
   }

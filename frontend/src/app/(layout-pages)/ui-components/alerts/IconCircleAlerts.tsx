@@ -42,7 +42,7 @@ export function IconCircleAlerts() {
                 <div>
                     <AlertTitle>New Feature Available</AlertTitle>
                     <AlertDescription>
-                        We've added advanced analytics to your dashboard. Check it out now.
+                         We&apos;ve added advanced analytics to your dashboard. Check it out now.
                     </AlertDescription>
                 </div>
             </Alert>
@@ -54,7 +54,7 @@ export function IconCircleAlerts() {
                 <div>
                     <AlertTitle>Transaction Failed</AlertTitle>
                     <AlertDescription>
-                        We couldn't process your transaction. Please verify your details and try again.
+                         We couldn&apos;t process your transaction. Please verify your details and try again.
                     </AlertDescription>
                 </div>
             </Alert>

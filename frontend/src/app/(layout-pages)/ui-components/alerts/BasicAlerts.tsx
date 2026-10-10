@@ -1,8 +1,7 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertTriangleIcon, ArchiveX, Bell, BellDot, CheckCircle2Icon, InfoIcon, ShieldAlert, XCircleIcon, XIcon } from "lucide-react"
+import { AlertTriangleIcon, Bell, CheckCircle2Icon, XCircleIcon } from "lucide-react"
 
 export function AlertsBasic() {
-0
     return (
         <div className="w-full max-w-3xl items-start gap-4 mx-auto space-y-6">
 
@@ -42,7 +41,7 @@ export function AlertsBasic() {
                 <div>
                     <AlertTitle>New Feature Available</AlertTitle>
                     <AlertDescription>
-                        We've added advanced analytics to your dashboard. Check it out now.
+                         We&apos;ve added advanced analytics to your dashboard. Check it out now.
                     </AlertDescription>
                 </div>
             </Alert>
@@ -54,7 +53,7 @@ export function AlertsBasic() {
                 <div>
                     <AlertTitle>Transaction Failed</AlertTitle>
                     <AlertDescription>
-                        We couldn't process your transaction. Please verify your details and try again.
+                         We couldn&apos;t process your transaction. Please verify your details and try again.
                     </AlertDescription>
                 </div>
             </Alert>
