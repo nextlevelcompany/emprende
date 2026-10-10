@@ -18,7 +18,7 @@ export function middleware(request: NextRequest) {
   }
 
   const isAdminRoute = pathname.startsWith("/admin") && pathname !== "/admin/login";
-  const isSocioRoute = pathname.startsWith("/socio") && pathname !== "/login";
+  const isSocioRoute = pathname.startsWith("/socio");
 
   // Si intenta acceder a una ruta protegida sin ninguna cookie de sesión
   if ((isAdminRoute || isSocioRoute) && !accessToken && !refreshToken) {
@@ -36,11 +36,13 @@ export function middleware(request: NextRequest) {
         const payload = JSON.parse(payloadJson);
 
         if (isAdminRoute && payload.role !== "ADMIN") {
-          return NextResponse.redirect(new URL("/login", request.url));
+          // Un socio intentando entrar a admin → mandarlo a su portal
+          return NextResponse.redirect(new URL("/socio/mi-cuenta", request.url));
         }
 
         if (isSocioRoute && payload.role !== "SOCIO") {
-          return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+          // Un admin intentando entrar al portal de socio → mandarlo al panel admin
+          return NextResponse.redirect(new URL("/dashboard/analytics", request.url));
         }
       }
     } catch {

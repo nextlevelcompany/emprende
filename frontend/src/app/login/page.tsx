@@ -29,7 +29,7 @@ export default function SocioLoginPage() {
         throw new Error(data.detail || data.title || "Credenciales no válidas para socio");
       }
 
-      router.push("/dashboard/analytics");
+      router.push("/socio/mi-cuenta");
     } catch (err: any) {
       setError(err.message || "Error al iniciar sesión");
     } finally {
