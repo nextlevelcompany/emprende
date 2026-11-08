@@ -196,7 +196,10 @@ public class SocioService {
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
-        return socioRepository.findAll(spec, pageable).map(this::toResponse);
+        Page<Socio> pagina = socioRepository.findAll(spec, pageable);
+        List<UUID> socioIds = pagina.getContent().stream().map(Socio::getId).toList();
+        Map<UUID, AppUser> userMap = findUsersBySocioIds(socioIds);
+        return pagina.map(s -> toResponse(s, userMap.get(s.getId())));
     }
 
     @Transactional(readOnly = true)
@@ -205,7 +208,9 @@ public class SocioService {
         List<Socio> socios = soloActivos
                 ? socioRepository.findByCajaIdAndEstadoAndDeletedAtIsNullOrderByCodigoAsc(cajaId, SocioEstado.ACTIVO)
                 : socioRepository.findByCajaIdAndDeletedAtIsNullOrderByCodigoAsc(cajaId);
-        return socios.stream().map(this::toResponse).toList();
+        List<UUID> socioIds = socios.stream().map(Socio::getId).toList();
+        Map<UUID, AppUser> userMap = findUsersBySocioIds(socioIds);
+        return socios.stream().map(s -> toResponse(s, userMap.get(s.getId()))).toList();
     }
 
     @Transactional
@@ -261,7 +266,25 @@ public class SocioService {
         );
     }
 
+    private Map<UUID, AppUser> findUsersBySocioIds(List<UUID> socioIds) {
+        if (socioIds == null || socioIds.isEmpty()) {
+            return Map.of();
+        }
+        return appUserRepository.findBySocioIdIn(socioIds).stream()
+                .filter(u -> u.getSocioId() != null)
+                .collect(java.util.stream.Collectors.toMap(
+                        AppUser::getSocioId,
+                        u -> u,
+                        (existente, reemplazo) -> existente
+                ));
+    }
+
     private SocioResponse toResponse(Socio socio) {
+        AppUser user = appUserRepository.findBySocioId(socio.getId()).orElse(null);
+        return toResponse(socio, user);
+    }
+
+    private SocioResponse toResponse(Socio socio, AppUser user) {
         String docEnmascarado = "********";
         if (socio.getDocumentoEnc() != null) {
             try {
@@ -274,9 +297,8 @@ public class SocioService {
             } catch (Exception ignored) {}
         }
 
-        Optional<AppUser> userOpt = appUserRepository.findBySocioId(socio.getId());
-        boolean tieneAcceso = userOpt.isPresent();
-        String usuarioStatus = userOpt.map(u -> u.getStatus().name()).orElse("SIN_ACCESO");
+        boolean tieneAcceso = user != null;
+        String usuarioStatus = user != null && user.getStatus() != null ? user.getStatus().name() : "SIN_ACCESO";
 
         return new SocioResponse(
                 socio.getId(),

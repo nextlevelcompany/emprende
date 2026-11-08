@@ -1,3 +1,11 @@
+logging:
+  level:
+    root: INFO
+    com.cajachambala: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+
 spring:
   application:
     name: caja-chambala-backend

@@ -21,5 +21,6 @@ public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
     Optional<AppUser> findByEmailChangeTokenHash(String emailChangeTokenHash);
     boolean existsByPendingEmail(String pendingEmail);
     Optional<AppUser> findBySocioId(UUID socioId);
+    java.util.List<AppUser> findBySocioIdIn(java.util.Collection<UUID> socioIds);
     boolean existsByCajaIdAndRole(UUID cajaId, UserRole role);
 }
