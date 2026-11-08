@@ -8,7 +8,7 @@ import { AlertCircle, CheckCircle2, Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function ConfirmarCorreoPage() {
+function ConfirmarCorreoContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [status, setStatus] = React.useState<"loading" | "success" | "error">("loading");
@@ -50,4 +50,16 @@ export default function ConfirmarCorreoPage() {
       </CardContent>
     </Card>
   </main>;
+}
+
+export default function ConfirmarCorreoPage() {
+  return (
+    <React.Suspense fallback={
+      <main className="flex min-h-[70vh] w-full items-center justify-center p-4">
+        <Loader2 className="size-7 animate-spin text-primary" />
+      </main>
+    }>
+      <ConfirmarCorreoContent />
+    </React.Suspense>
+  );
 }
