@@ -45,16 +45,16 @@ export async function GET(req: NextRequest) {
 
         cookieStore.set("access_token", tokenData.accessToken, {
           httpOnly: true,
-          secure: isProduction,
-          sameSite: "strict",
+          secure: false,
+          sameSite: "lax",
           path: "/",
           maxAge: 15 * 60,
         });
 
         cookieStore.set("refresh_token", tokenData.refreshToken, {
           httpOnly: true,
-          secure: isProduction,
-          sameSite: "strict",
+          secure: false,
+          sameSite: "lax",
           path: "/",
           maxAge: 7 * 24 * 60 * 60,
         });

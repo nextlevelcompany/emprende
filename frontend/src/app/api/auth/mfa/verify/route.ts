@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     if (data.accessToken) {
       cookieStore.set("access_token", data.accessToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: "strict",
+        secure: false,
+        sameSite: "lax",
         path: "/",
         maxAge: 15 * 60,
       });
@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
     if (data.refreshToken) {
       cookieStore.set("refresh_token", data.refreshToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: "strict",
+        secure: false,
+        sameSite: "lax",
         path: "/",
         maxAge: 7 * 24 * 60 * 60,
       });

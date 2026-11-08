@@ -43,16 +43,16 @@ export async function fetchWithAuth(path: string, options: RequestInit = {}) {
       try {
         cookieStore.set("access_token", newAccessToken, {
           httpOnly: true,
-          secure: isProduction,
-          sameSite: "strict",
+          secure: false,
+          sameSite: "lax",
           path: "/",
           maxAge: 15 * 60,
         });
         if (newRefreshToken) {
           cookieStore.set("refresh_token", newRefreshToken, {
             httpOnly: true,
-            secure: isProduction,
-            sameSite: "strict",
+            secure: false,
+            sameSite: "lax",
             path: "/",
             maxAge: 7 * 24 * 60 * 60,
           });

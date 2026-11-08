@@ -47,12 +47,14 @@ export async function POST(req: NextRequest) {
 
     const cookieStore = await cookies();
     const isProduction = process.env.NODE_ENV === "production";
+    const isHttps = req.nextUrl.protocol === "https:" || req.headers.get("x-forwarded-proto") === "https";
+    const secureCookie = isProduction && isHttps;
 
     if (data.accessToken) {
       cookieStore.set("access_token", data.accessToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: "strict",
+        secure: secureCookie,
+        sameSite: "lax",
         path: "/",
         maxAge: 15 * 60, // 15 minutos
       });
@@ -61,8 +63,8 @@ export async function POST(req: NextRequest) {
     if (data.refreshToken) {
       cookieStore.set("refresh_token", data.refreshToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: "strict",
+        secure: secureCookie,
+        sameSite: "lax",
         path: "/",
         maxAge: 7 * 24 * 60 * 60, // 7 días
       });
