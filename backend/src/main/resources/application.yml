@@ -59,6 +59,9 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+  health:
+    mail:
+      enabled: false
 
 springdoc:
   api-docs:
