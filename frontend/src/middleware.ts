@@ -8,13 +8,32 @@ export function middleware(request: NextRequest) {
   // en toda operación que pueda modificar estado (incluye login y refresh).
   if (pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
     const origin = request.headers.get("origin");
+    const secFetchSite = request.headers.get("sec-fetch-site");
     let sameOrigin = false;
-    if (origin) {
-      try { sameOrigin = new URL(origin).origin === request.nextUrl.origin; } catch { sameOrigin = false; }
+
+    if (secFetchSite === "same-origin") {
+      sameOrigin = true;
+    } else if (origin) {
+      try {
+        const originUrl = new URL(origin);
+        const hostHeader = request.headers.get("x-forwarded-host") || request.headers.get("host");
+        const hostNameOnly = hostHeader ? hostHeader.split(":")[0].toLowerCase() : null;
+
+        if (originUrl.origin === request.nextUrl.origin) {
+          sameOrigin = true;
+        } else if (hostNameOnly && originUrl.hostname.toLowerCase() === hostNameOnly) {
+          sameOrigin = true;
+        }
+      } catch {
+        sameOrigin = false;
+      }
     } else {
-      sameOrigin = request.headers.get("sec-fetch-site") === "same-origin";
+      sameOrigin = !secFetchSite || secFetchSite === "same-origin";
     }
-    if (!sameOrigin) return NextResponse.json({ detail: "Origen de solicitud no permitido" }, { status: 403 });
+
+    if (!sameOrigin) {
+      return NextResponse.json({ detail: "Origen de solicitud no permitido" }, { status: 403 });
+    }
   }
   const accessToken = request.cookies.get("access_token")?.value;
   const refreshToken = request.cookies.get("refresh_token")?.value;
