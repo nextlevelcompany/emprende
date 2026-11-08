@@ -91,8 +91,7 @@ services:
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL is required}
     networks:
       - internal_net
-    ports:
-      - "8080:8080"
+      - proxy_net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/actuator/health"]
       interval: 20s
@@ -104,9 +103,31 @@ services:
         limits:
           memory: 1G
 
+  proxy:
+    image: caddy:2-alpine
+    container_name: caja_chambala_prod_proxy
+    restart: always
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required (for example caja.example.com)}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/production/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - proxy_net
+
 networks:
   internal_net:
+    driver: bridge
+    internal: true
+  proxy_net:
     driver: bridge
 
 volumes:
   pgdata_prod:
+  caddy_data:
+  caddy_config:

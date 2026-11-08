@@ -16,11 +16,23 @@ frontend/build/
 *.tsbuildinfo
 next-env.d.ts
 
-# Entornos y Secretos (nunca commitear .env)
+# Entornos y Secretos (nunca commitear archivos de entorno reales)
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
+!.env.*.example
+!.env.*.template
+
+# Claves, certificados y credenciales locales
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+secrets/
 
 # IDEs y Editores
 .idea/
@@ -42,3 +54,26 @@ Thumbs.db
 
 # Docker y BD local
 pgdata/
+**/pgdata/
+postgres-data/
+*.dump
+*.dump.gz
+*.backup
+*.bak
+*.sqlite
+*.sqlite3
+*.db
+
+# Datos financieros y documentos de la organización (mantener fuera de Git)
+/Datos Emprende/
+/scratch/
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+
+# Respaldos comprimidos y exportaciones locales
+*.sql.gz
+*.tar.gz
+/exports/
+/backups/

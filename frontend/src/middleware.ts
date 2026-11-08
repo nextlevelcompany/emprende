@@ -30,7 +30,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isAdminRoute = pathname.startsWith("/admin") && pathname !== "/admin/login";
+  const isDashboardRoute = pathname.startsWith("/dashboard");
+  const isAdminRoute = (pathname.startsWith("/admin") && pathname !== "/admin/login") || isDashboardRoute;
   const isSocioRoute = pathname.startsWith("/socio");
 
   // Si intenta acceder a una ruta protegida sin ninguna cookie de sesión
@@ -78,6 +79,7 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/socio/:path*",
+    "/dashboard/:path*",
     "/api/:path*",
   ],
 };

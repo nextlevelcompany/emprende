@@ -1,4 +1,4 @@
-# Revisión de datos personales en migraciones
+﻿# Revisión de datos personales en migraciones
 
 ## Hallazgos
 
@@ -33,7 +33,7 @@ El 2026-10-10 se respaldó y revisó la base Docker `caja_chambala` antes de apl
 - Las 11 claves foráneas compuestas se compararon con los datos reales: todas reportaron cero relaciones cruzadas y luego quedaron validadas.
 - Se comprobó que un contexto HMAC de administrador puede leer los datos de su caja, uno de socio queda limitado a su propio registro y una firma inventada no devuelve filas.
 - Se rotaron las contraseñas de PostgreSQL y de los roles de aplicación. El puerto del contenedor quedó publicado solo en `127.0.0.1:5433`.
-- El secreto JWT de desarrollo se rotó. La clave AES histórica se conservó para no invalidar ciphertext existente; rotarla requiere re cifrar previamente los datos.
-- El backend y la base terminaron healthy. Se conservó el respaldo previo a los cambios fuera del repositorio.
+- El secreto JWT de desarrollo se rotó. La clave AES histórica se rotó de forma transaccional: se re cifraron y verificaron 23 documentos (`socio.documento_enc`); no había secretos MFA almacenados. La clave nueva quedó configurada en el `.env` ignorado por Git.
+- El backend y la base terminaron healthy después de arrancar con la clave nueva. Se conservó el respaldo previo a los cambios fuera del repositorio.
 
 La sanitización de valores personales en migraciones históricas sigue pendiente: no se cambió el historial Flyway ni se borraron registros cuyo origen o uso institucional no está confirmado. Antes de distribuir el repositorio o crear nuevas instalaciones, responsables de negocio deben confirmar qué valores son de prueba y aprobar una estrategia de anonimización que mantenga la trazabilidad necesaria.
