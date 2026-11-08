@@ -8,7 +8,7 @@ app:
   security:
     rls-context-hmac-secret-hex: ${RLS_CONTEXT_HMAC_SECRET_HEX}
   cors:
-    allowed-origin: ${APP_CORS_ALLOWED_ORIGIN}
+    allowed-origin: ${APP_CORS_ALLOWED_ORIGIN:*}
   mail:
     from: ${SMTP_FROM}
     frontend-url: ${FRONTEND_BASE_URL}
