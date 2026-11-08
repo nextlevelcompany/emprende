@@ -2342,7 +2342,7 @@ export default function PlanillaMensualPage() {
 
       {/* DIALOG: Otorgar Préstamo en Asamblea (Ampliación y Vista Completa) */}
       <Dialog open={modalPrestamo} onOpenChange={setModalPrestamo}>
-        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl md:max-w-5xl lg:max-w-6xl xl:max-w-7xl w-[96vw] max-h-[92vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-lg">
               <Coins className="h-5 w-5" />
@@ -2492,29 +2492,29 @@ export default function PlanillaMensualPage() {
 
                 {cronogramaSimuladoNuevo.length > 0 ? (
                   <div className="mt-2 border rounded-lg overflow-hidden flex-1 flex flex-col">
-                    <div className="max-h-72 overflow-y-auto">
-                      <Table>
+                    <div className="max-h-72 overflow-y-auto overflow-x-auto">
+                      <Table className="min-w-[500px]">
                         <TableHeader>
                           <TableRow className="bg-muted/40 text-[11px]">
-                            <TableHead className="w-12 text-center h-8 px-2 font-bold">N°</TableHead>
-                            <TableHead className="h-8 px-2 font-bold">Vencimiento</TableHead>
-                            <TableHead className="text-right h-8 px-2 font-bold">Capital</TableHead>
-                            <TableHead className="text-right h-8 px-2 font-bold">Interés</TableHead>
-                            <TableHead className="text-right h-8 px-2 font-bold text-emerald-600 dark:text-emerald-400">Cuota</TableHead>
-                            <TableHead className="text-right h-8 px-2 font-bold text-muted-foreground">Saldo</TableHead>
+                            <TableHead className="w-12 text-center h-8 px-2 font-bold whitespace-nowrap">N°</TableHead>
+                            <TableHead className="h-8 px-2 font-bold whitespace-nowrap">Vencimiento</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold whitespace-nowrap">Capital</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold whitespace-nowrap">Interés</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Cuota</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold text-muted-foreground whitespace-nowrap">Saldo</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {cronogramaSimuladoNuevo.map((c) => (
                             <TableRow key={c.nroCuota} className="text-xs hover:bg-muted/30">
-                              <TableCell className="text-center font-mono py-1.5 px-2 font-bold">{c.nroCuota}</TableCell>
-                              <TableCell className="py-1.5 px-2 font-mono text-[11px]">{formatFecha(c.fechaVencimiento)}</TableCell>
-                              <TableCell className="text-right font-mono py-1.5 px-2">S/. {c.capital.toFixed(2)}</TableCell>
-                              <TableCell className="text-right font-mono py-1.5 px-2 text-emerald-600 dark:text-emerald-400">
+                              <TableCell className="text-center font-mono py-1.5 px-2 font-bold whitespace-nowrap">{c.nroCuota}</TableCell>
+                              <TableCell className="py-1.5 px-2 font-mono text-[11px] whitespace-nowrap">{formatFecha(c.fechaVencimiento)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 whitespace-nowrap">S/. {c.capital.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                                 S/. {c.interes.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right font-mono py-1.5 px-2 font-bold">S/. {c.totalCuota.toFixed(2)}</TableCell>
-                              <TableCell className="text-right font-mono py-1.5 px-2 text-muted-foreground">
+                              <TableCell className="text-right font-mono py-1.5 px-2 font-bold whitespace-nowrap">S/. {c.totalCuota.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 text-muted-foreground whitespace-nowrap">
                                 S/. {c.saldoRestante.toFixed(2)}
                               </TableCell>
                             </TableRow>
@@ -2557,7 +2557,7 @@ export default function PlanillaMensualPage() {
 
       {/* DIALOG: Editar Préstamo en Asamblea (Permitido antes de cerrar el periodo) */}
       <Dialog open={modalEditarPrestamo} onOpenChange={setModalEditarPrestamo}>
-        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl md:max-w-5xl lg:max-w-6xl xl:max-w-7xl w-[96vw] max-h-[92vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-lg">
               <Pencil className="h-5 w-5" />
@@ -2699,29 +2699,29 @@ export default function PlanillaMensualPage() {
 
                 {cronogramaSimuladoEdit.length > 0 ? (
                   <div className="mt-2 border rounded-lg overflow-hidden flex-1 flex flex-col">
-                    <div className="max-h-72 overflow-y-auto">
-                      <Table>
+                    <div className="max-h-72 overflow-y-auto overflow-x-auto">
+                      <Table className="min-w-[500px]">
                         <TableHeader>
                           <TableRow className="bg-muted/40 text-[11px]">
-                            <TableHead className="w-12 text-center h-8 px-2 font-bold">N°</TableHead>
-                            <TableHead className="h-8 px-2 font-bold">Vencimiento</TableHead>
-                            <TableHead className="text-right h-8 px-2 font-bold">Capital</TableHead>
-                            <TableHead className="text-right h-8 px-2 font-bold">Interés</TableHead>
-                            <TableHead className="text-right h-8 px-2 font-bold text-emerald-600 dark:text-emerald-400">Cuota</TableHead>
-                            <TableHead className="text-right h-8 px-2 font-bold text-muted-foreground">Saldo</TableHead>
+                            <TableHead className="w-12 text-center h-8 px-2 font-bold whitespace-nowrap">N°</TableHead>
+                            <TableHead className="h-8 px-2 font-bold whitespace-nowrap">Vencimiento</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold whitespace-nowrap">Capital</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold whitespace-nowrap">Interés</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Cuota</TableHead>
+                            <TableHead className="text-right h-8 px-2 font-bold text-muted-foreground whitespace-nowrap">Saldo</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {cronogramaSimuladoEdit.map((c) => (
                             <TableRow key={c.nroCuota} className="text-xs hover:bg-muted/30">
-                              <TableCell className="text-center font-mono py-1.5 px-2 font-bold">{c.nroCuota}</TableCell>
-                              <TableCell className="py-1.5 px-2 font-mono text-[11px]">{formatFecha(c.fechaVencimiento)}</TableCell>
-                              <TableCell className="text-right font-mono py-1.5 px-2">S/. {c.capital.toFixed(2)}</TableCell>
-                              <TableCell className="text-right font-mono py-1.5 px-2 text-emerald-600 dark:text-emerald-400">
+                              <TableCell className="text-center font-mono py-1.5 px-2 font-bold whitespace-nowrap">{c.nroCuota}</TableCell>
+                              <TableCell className="py-1.5 px-2 font-mono text-[11px] whitespace-nowrap">{formatFecha(c.fechaVencimiento)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 whitespace-nowrap">S/. {c.capital.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                                 S/. {c.interes.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right font-mono py-1.5 px-2 font-bold">S/. {c.totalCuota.toFixed(2)}</TableCell>
-                              <TableCell className="text-right font-mono py-1.5 px-2 text-muted-foreground">
+                              <TableCell className="text-right font-mono py-1.5 px-2 font-bold whitespace-nowrap">S/. {c.totalCuota.toFixed(2)}</TableCell>
+                              <TableCell className="text-right font-mono py-1.5 px-2 text-muted-foreground whitespace-nowrap">
                                 S/. {c.saldoRestante.toFixed(2)}
                               </TableCell>
                             </TableRow>
@@ -2827,7 +2827,7 @@ export default function PlanillaMensualPage() {
 
       {/* DIALOG: Modificar Cuotas / Reprogramación (Permitido incluso si el periodo está cerrado) */}
       <Dialog open={modalModificarCuotas} onOpenChange={setModalModificarCuotas}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl md:max-w-4xl lg:max-w-5xl w-[96vw] max-h-[92vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-lg">
               <CalendarClock className="h-5 w-5" />
