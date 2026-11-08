@@ -2,7 +2,11 @@
 FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 WORKDIR /workspace
 
+ENV MAVEN_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv4Addresses=true -Dmaven.wagon.http.retryHandler.count=5"
+
 COPY pom.xml ./pom.xml
+RUN mvn -B dependency:go-offline -DskipTests || true
+
 COPY src ./src
 RUN mvn -B -DskipTests package
 
