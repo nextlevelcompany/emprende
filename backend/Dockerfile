@@ -14,8 +14,7 @@ RUN mvn -B -DskipTests package
 FROM eclipse-temurin:21-jre-alpine AS runner
 WORKDIR /app
 
-RUN apk add --no-cache curl \
-    && addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=build /workspace/target/backend-0.0.1-SNAPSHOT.jar /app/app.jar
 RUN chown -R appuser:appgroup /app
@@ -26,6 +25,6 @@ ENV JAVA_OPTS="-XX:+UseG1GC -Xms128m -Xmx512m -XX:+ExitOnOutOfMemoryError"
 EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=10 \
-  CMD curl -f http://localhost:8080/api/v1/actuator/health || exit 1
+  CMD wget -q -O - http://localhost:8080/api/v1/actuator/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

@@ -57,7 +57,7 @@ services:
         limits:
           memory: 768M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/actuator/health"]
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/api/v1/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
