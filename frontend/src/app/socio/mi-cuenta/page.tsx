@@ -42,6 +42,7 @@ import { descargarDocumentoPrestamoPDF } from "@/lib/prestamo-documento-pdf";
 import {
   descargarCertificadoPDF,
   descargarCertificadosSocioPDF,
+  extraerAnio,
   type CertificadoAccionPDFData,
   type DirectivaCargoPDFData,
   type EmpresaPDFData,
@@ -61,6 +62,10 @@ type Certificado = {
   estado: string;
   tipoOrigen?: string;
   observaciones?: string | null;
+  periodoId?: string | null;
+  periodoAnio?: number | null;
+  periodoMes?: number | null;
+  periodoFechaReunion?: string | null;
 };
 
 type Cuota = {
@@ -309,23 +314,32 @@ export default function SocioMiCuentaPage() {
       // La carga del tablero ya prepara el contexto; los respaldos del generador
       // oficial permiten descargar aun si la ruta institucional no responde.
       const pdfContext = contextoCertificado || { directiva: [], empresa: null };
-      const certificadosOficiales: CertificadoAccionPDFData[] = items.map((cert) => ({
-        id: cert.id,
-        numeroCertificado: cert.numeroCertificado,
-        socioId: socio.id,
-        socioCodigo: socio.codigo,
-        socioNombre: socio.nombreCompleto,
-        socioDocumentoTipo: socio.documentoTipo || "DNI",
-        socioDocumentoNumero: socio.documentoNumero || socio.documentoEnmascarado || null,
-        serieInicio: cert.serieInicio,
-        serieFin: cert.serieFin,
-        cantidad: cert.cantidad,
-        valorNominal: cert.valorNominal,
-        totalMonto: cert.totalMonto,
-        fechaEmision: cert.fechaEmision,
-        estado: cert.estado,
-        tipoOrigen: cert.tipoOrigen,
-      }));
+      const certificadosOficiales: CertificadoAccionPDFData[] = items.map((cert) => {
+        const fechaOficial = cert.periodoFechaReunion || cert.fechaEmision;
+        const anioOficial = cert.periodoAnio || extraerAnio(fechaOficial);
+        return {
+          id: cert.id,
+          numeroCertificado: cert.numeroCertificado,
+          socioId: socio.id,
+          socioCodigo: socio.codigo,
+          socioNombre: socio.nombreCompleto,
+          socioDocumentoTipo: socio.documentoTipo || "DNI",
+          socioDocumentoNumero: socio.documentoNumero || socio.documentoEnmascarado || null,
+          serieInicio: cert.serieInicio,
+          serieFin: cert.serieFin,
+          cantidad: cert.cantidad,
+          valorNominal: cert.valorNominal,
+          totalMonto: cert.totalMonto,
+          fechaEmision: fechaOficial,
+          fechaPeriodo: fechaOficial,
+          periodoId: cert.periodoId,
+          periodoAnio: anioOficial,
+          periodoMes: cert.periodoMes,
+          periodoFechaReunion: cert.periodoFechaReunion,
+          estado: cert.estado,
+          tipoOrigen: cert.tipoOrigen,
+        };
+      });
       if (certificadosOficiales.length === 1) {
         descargarCertificadoPDF(
           certificadosOficiales[0],
@@ -558,9 +572,11 @@ export default function SocioMiCuentaPage() {
                     <td className="px-3 py-3 text-right font-bold">{cert.cantidad}</td>
                     <td className="px-3 py-3 text-right font-semibold text-emerald-600 dark:text-emerald-400">{money(cert.totalMonto)}</td>
                     <td className="px-3 py-3 text-center font-mono text-muted-foreground">
-                      {contextoCertificado?.empresa?.fechaFundacion
-                        ? formatFecha(contextoCertificado.empresa.fechaFundacion)
-                          : cert.fechaEmision ? formatFecha(cert.fechaEmision) : "—"}
+                      {cert.periodoFechaReunion
+                        ? formatFecha(cert.periodoFechaReunion)
+                        : cert.fechaEmision
+                        ? formatFecha(cert.fechaEmision)
+                        : "—"}
                     </td>
                     <td className="px-3 py-3"><span className="rounded border px-2 py-1 text-[10px] uppercase">{(cert.tipoOrigen || "—").replace(/_/g, " ")}</span></td>
                     <td className="px-3 py-3 text-center">

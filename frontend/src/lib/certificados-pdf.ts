@@ -14,7 +14,12 @@ export interface CertificadoAccionPDFData {
   cantidad: number;
   valorNominal: number;
   totalMonto: number;
-  fechaEmision: string;
+  fechaEmision?: string | null;
+  periodoId?: string | null;
+  periodoAnio?: number | null;
+  periodoMes?: number | null;
+  periodoFechaReunion?: string | null;
+  fechaPeriodo?: string | null;
   estado: "ACTIVO" | "DEVUELTO_RETIRO" | "TRANSFERIDO" | string;
   tipoOrigen?: string;
 }
@@ -181,14 +186,22 @@ export function dibujarCertificadoEnPagina(
   directiva: DirectivaCargoPDFData[],
   empresa?: EmpresaPDFData | null
 ): void {
-  // 1. Fecha oficial canónica: prioridad absoluta a la fecha propia de emisión del certificado
-  const fechaOficialStr =
+  // 1. Fecha oficial canónica: vinculada PRIORITARIAMENTE al periodo contable de emisión o la fecha propia del certificado.
+  // IMPORTANTE: NUNCA usar como fallback fechaEmisionAcciones o fechaFundacion de la empresa (que es 2021)
+  // porque corresponden a la constitución de la entidad institucional y no a la asamblea del certificado.
+  let fechaOficialStr =
+    cert.fechaPeriodo ||
+    cert.periodoFechaReunion ||
     cert.fechaEmision ||
-    empresa?.fechaEmisionAcciones ||
-    empresa?.fechaFundacion ||
-    new Date().toISOString().split("T")[0];
+    (cert.periodoAnio && cert.periodoMes
+      ? `${cert.periodoAnio}-${String(cert.periodoMes).padStart(2, "0")}-08`
+      : null);
 
-  const anioEmision = extraerAnio(fechaOficialStr);
+  if (!fechaOficialStr) {
+    fechaOficialStr = new Date().toISOString().split("T")[0];
+  }
+
+  const anioEmision = cert.periodoAnio || extraerAnio(fechaOficialStr);
   const fechaFormateada = formatearFechaFormal(fechaOficialStr);
 
   // 2. Ubicación institucional dinámica jalada de la empresa

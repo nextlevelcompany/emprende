@@ -28,6 +28,8 @@ import {
   descargarCertificadosSocioPDF,
   descargarLoteCertificadosPDF,
   descargarReporteAccionesPorFechasPDF,
+  extraerAnio,
+  type CertificadoAccionPDFData,
   type EmpresaPDFData,
 } from "@/lib/certificados-pdf";
 
@@ -122,6 +124,9 @@ interface CertificadoAccion {
   observaciones: string | null;
   socioDocumentoTipo?: string | null;
   socioDocumentoNumero?: string | null;
+  periodoAnio?: number | null;
+  periodoMes?: number | null;
+  periodoFechaReunion?: string | null;
 }
 
 interface Periodo {
@@ -358,6 +363,36 @@ export default function AccionesPage() {
     }
   };
 
+  const periodosMap = React.useMemo(() => {
+    const map = new Map<string, Periodo>();
+    periodos.forEach((p) => map.set(p.id, p));
+    return map;
+  }, [periodos]);
+
+  const enriquecerCertificado = React.useCallback(
+    (c: CertificadoAccion): CertificadoAccionPDFData => {
+      const p = c.periodoId ? periodosMap.get(c.periodoId) : null;
+      const fechaPeriodo =
+        p?.fechaReunion ||
+        (p ? `${p.anio}-${String(p.mes).padStart(2, "0")}-08` : null) ||
+        c.periodoFechaReunion ||
+        c.fechaEmision;
+      const periodoAnio =
+        p?.anio ?? c.periodoAnio ?? extraerAnio(fechaPeriodo || c.fechaEmision);
+
+      return {
+        ...c,
+        periodoId: c.periodoId,
+        periodoAnio,
+        periodoMes: p?.mes ?? c.periodoMes ?? null,
+        periodoFechaReunion: p?.fechaReunion || c.periodoFechaReunion || null,
+        fechaPeriodo,
+        fechaEmision: fechaPeriodo || c.fechaEmision,
+      };
+    },
+    [periodosMap]
+  );
+
   const sociosFiltrados = React.useMemo(() => {
     if (!searchSocio.trim()) return socios;
     const term = searchSocio.toLowerCase();
@@ -455,15 +490,17 @@ export default function AccionesPage() {
         subtitulo = `Período de emisión: ${modalFechaDesde ? formatFecha(modalFechaDesde) : "Inicio"} al ${modalFechaHasta ? formatFecha(modalFechaHasta) : "Actual"}`;
       }
 
+      const certificadosEnriquecidos = certificadosModal.map(enriquecerCertificado);
+
       if (descargaTipoModal === "CERTIFICADOS") {
-        descargarLoteCertificadosPDF(certificadosModal, directiva, tituloReporte, empresa);
+        descargarLoteCertificadosPDF(certificadosEnriquecidos, directiva, tituloReporte, empresa);
         toast.success(
-          `Se descargó el lote de ${certificadosModal.length} certificados oficiales en PDF`
+          `Se descargó el lote de ${certificadosEnriquecidos.length} certificados oficiales en PDF`
         );
       } else {
         const tituloPadron = tituloReporte.replace("Certificados_", "Padron_");
         descargarReporteAccionesPorFechasPDF(
-          certificadosModal,
+          certificadosEnriquecidos,
           directiva,
           modalFechaDesde || undefined,
           modalFechaHasta || undefined,
@@ -776,10 +813,12 @@ export default function AccionesPage() {
                                     }
                                     try {
                                       const nombreSocio = s.socioNombre || certsDelSocio[0]?.socioNombre || "Socio";
-                                      const certsConNombre = certsDelSocio.map((c) => ({
-                                        ...c,
-                                        socioNombre: nombreSocio,
-                                      }));
+                                      const certsConNombre = certsDelSocio.map((c) =>
+                                        enriquecerCertificado({
+                                          ...c,
+                                          socioNombre: nombreSocio,
+                                        })
+                                      );
                                       descargarCertificadosSocioPDF(nombreSocio, certsConNombre, directiva, empresa);
                                       toast.success(
                                         certsConNombre.length === 1
@@ -973,7 +1012,13 @@ export default function AccionesPage() {
                             {formatMoneda(c.totalMonto)}
                           </TableCell>
                           <TableCell className="text-center text-xs font-mono text-muted-foreground">
-                            {c.fechaEmision ? formatFecha(c.fechaEmision) : (empresa?.fechaFundacion ? formatFecha(empresa.fechaFundacion) : "—")}
+                            {(() => {
+                              const fechaFila =
+                                (c.periodoId && periodosMap.get(c.periodoId)?.fechaReunion) ||
+                                c.periodoFechaReunion ||
+                                c.fechaEmision;
+                              return fechaFila ? formatFecha(fechaFila) : "—";
+                            })()}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="text-[10px] uppercase font-mono">
@@ -1003,7 +1048,7 @@ export default function AccionesPage() {
                               title="Descargar Certificado Oficial en PDF"
                               onClick={() => {
                                 try {
-                                  descargarCertificadoPDF(c, directiva, empresa);
+                                  descargarCertificadoPDF(enriquecerCertificado(c), directiva, empresa);
                                   toast.success(
                                     `Certificado CERT-${String(c.numeroCertificado).padStart(6, "0")} descargado en PDF`
                                   );

@@ -29,8 +29,35 @@ public class AccionDtos {
             UUID certificadoOrigenId,
             String observaciones,
             String socioDocumentoTipo,
-            String socioDocumentoNumero
+            String socioDocumentoNumero,
+            Short periodoAnio,
+            Short periodoMes,
+            LocalDate periodoFechaReunion
     ) {
+        public CertificadoAccionDto(
+                UUID id,
+                Integer numeroCertificado,
+                UUID socioId,
+                Integer socioCodigo,
+                String socioNombre,
+                Integer serieInicio,
+                Integer serieFin,
+                Integer cantidad,
+                BigDecimal valorNominal,
+                BigDecimal totalMonto,
+                LocalDate fechaEmision,
+                UUID periodoId,
+                UUID operacionId,
+                String estado,
+                String tipoOrigen,
+                UUID certificadoOrigenId,
+                String observaciones,
+                String socioDocumentoTipo,
+                String socioDocumentoNumero
+        ) {
+            this(id, numeroCertificado, socioId, socioCodigo, socioNombre, serieInicio, serieFin, cantidad, valorNominal, totalMonto, fechaEmision, periodoId, operacionId, estado, tipoOrigen, certificadoOrigenId, observaciones, socioDocumentoTipo, socioDocumentoNumero, null, null, null);
+        }
+
         public CertificadoAccionDto(
                 UUID id,
                 Integer numeroCertificado,
@@ -50,7 +77,7 @@ public class AccionDtos {
                 UUID certificadoOrigenId,
                 String observaciones
         ) {
-            this(id, numeroCertificado, socioId, socioCodigo, socioNombre, serieInicio, serieFin, cantidad, valorNominal, totalMonto, fechaEmision, periodoId, operacionId, estado, tipoOrigen, certificadoOrigenId, observaciones, "DNI", null);
+            this(id, numeroCertificado, socioId, socioCodigo, socioNombre, serieInicio, serieFin, cantidad, valorNominal, totalMonto, fechaEmision, periodoId, operacionId, estado, tipoOrigen, certificadoOrigenId, observaciones, "DNI", null, null, null, null);
         }
     }
 

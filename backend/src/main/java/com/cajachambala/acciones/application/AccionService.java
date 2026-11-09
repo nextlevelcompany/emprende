@@ -5,6 +5,8 @@ import com.cajachambala.acciones.domain.CertificadoAccion;
 import com.cajachambala.acciones.domain.TransferenciaAccion;
 import com.cajachambala.acciones.infrastructure.persistence.CertificadoAccionRepository;
 import com.cajachambala.acciones.infrastructure.persistence.TransferenciaAccionRepository;
+import com.cajachambala.caja.domain.Periodo;
+import com.cajachambala.caja.infrastructure.persistence.PeriodoRepository;
 import com.cajachambala.identidad.domain.UserRole;
 import com.cajachambala.identidad.infrastructure.audit.AuditService;
 import com.cajachambala.identidad.infrastructure.security.AesGcmCryptoService;
@@ -30,6 +32,7 @@ public class AccionService {
     private final AuditService auditService;
     private final AesGcmCryptoService cryptoService;
     private final CorrelativoService correlativoService;
+    private final PeriodoRepository periodoRepository;
 
     public AccionService(
             CertificadoAccionRepository certificadoRepository,
@@ -37,7 +40,8 @@ public class AccionService {
             SocioRepository socioRepository,
             AuditService auditService,
             AesGcmCryptoService cryptoService,
-            CorrelativoService correlativoService
+            CorrelativoService correlativoService,
+            PeriodoRepository periodoRepository
     ) {
         this.certificadoRepository = certificadoRepository;
         this.transferenciaRepository = transferenciaRepository;
@@ -45,6 +49,7 @@ public class AccionService {
         this.auditService = auditService;
         this.cryptoService = cryptoService;
         this.correlativoService = correlativoService;
+        this.periodoRepository = periodoRepository;
     }
 
     @Transactional(readOnly = true)
@@ -134,6 +139,9 @@ public class AccionService {
         final UUID socioFiltro = socioId;
         List<CertificadoAccion> list = certificadoRepository.findByCajaIdOrderByNumeroCertificadoDesc(cajaId);
 
+        Map<UUID, Periodo> periodosMap = periodoRepository.findByCajaIdOrderByAnioDescMesDesc(cajaId).stream()
+                .collect(Collectors.toMap(Periodo::getId, p -> p, (a, b) -> a));
+
         return list.stream()
                 .filter(c -> socioFiltro == null || (c.getSocio() != null && c.getSocio().getId().equals(socioFiltro)))
                 .filter(c -> estado == null || estado.isBlank() || c.getEstado().equalsIgnoreCase(estado))
@@ -145,7 +153,7 @@ public class AccionService {
                     boolean matchSocio = c.getSocio() != null && c.getSocio().getNombreCompleto().toLowerCase().contains(b);
                     return matchNum || matchSerie || matchSocio;
                 })
-                .map(this::toCertificadoDto)
+                .map(c -> toCertificadoDto(c, periodosMap))
                 .toList();
     }
 
@@ -154,7 +162,10 @@ public class AccionService {
         UUID cajaId = getCajaIdActual();
         CertificadoAccion c = certificadoRepository.findByIdAndCajaId(id, cajaId)
                 .orElseThrow(() -> new IllegalArgumentException("Certificado no encontrado"));
-        return toCertificadoDto(c);
+        Map<UUID, Periodo> periodosMap = (c.getPeriodoId() != null)
+                ? periodoRepository.findByIdAndCajaId(c.getPeriodoId(), cajaId).map(p -> Map.of(p.getId(), p)).orElse(Map.of())
+                : Map.of();
+        return toCertificadoDto(c, periodosMap);
     }
 
     @Transactional(readOnly = true)
@@ -316,7 +327,7 @@ public class AccionService {
         return toTransferenciaDto(trans);
     }
 
-    private CertificadoAccionDto toCertificadoDto(CertificadoAccion c) {
+    private CertificadoAccionDto toCertificadoDto(CertificadoAccion c, Map<UUID, Periodo> periodosMap) {
         String docTipo = (c.getSocio() != null && c.getSocio().getDocumentoTipo() != null)
                 ? c.getSocio().getDocumentoTipo() : "DNI";
         String docNum = null;
@@ -325,6 +336,14 @@ public class AccionService {
                 docNum = cryptoService.decryptString(c.getSocio().getDocumentoEnc());
             } catch (Exception ignored) {}
         }
+
+        Periodo p = (c.getPeriodoId() != null && periodosMap != null) ? periodosMap.get(c.getPeriodoId()) : null;
+        LocalDate fechaEmisionOficial = (p != null && p.getFechaReunion() != null)
+                ? p.getFechaReunion()
+                : c.getFechaEmision();
+        Short anio = (p != null) ? p.getAnio() : (fechaEmisionOficial != null ? (short) fechaEmisionOficial.getYear() : null);
+        Short mes = (p != null) ? p.getMes() : (fechaEmisionOficial != null ? (short) fechaEmisionOficial.getMonthValue() : null);
+        LocalDate fechaReunion = (p != null) ? p.getFechaReunion() : null;
 
         return new CertificadoAccionDto(
                 c.getId(),
@@ -337,7 +356,7 @@ public class AccionService {
                 c.getCantidad(),
                 c.getValorNominal(),
                 c.getTotalMonto(),
-                c.getFechaEmision(),
+                fechaEmisionOficial,
                 c.getPeriodoId(),
                 c.getOperacionId(),
                 c.getEstado(),
@@ -345,7 +364,10 @@ public class AccionService {
                 c.getCertificadoOrigenId(),
                 c.getObservaciones(),
                 docTipo,
-                docNum
+                docNum,
+                anio,
+                mes,
+                fechaReunion
         );
     }
 
