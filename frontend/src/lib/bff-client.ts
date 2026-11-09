@@ -46,7 +46,7 @@ export async function fetchWithAuth(path: string, options: RequestInit = {}) {
           secure: false,
           sameSite: "lax",
           path: "/",
-          maxAge: 15 * 60,
+          maxAge: 4 * 60 * 60,
         });
         if (newRefreshToken) {
           cookieStore.set("refresh_token", newRefreshToken, {

@@ -60,13 +60,23 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Si hay access token, decodificar claims para validar roles en navegación
+  // Si hay access token, decodificar claims para validar roles y expiración en navegación
   if (accessToken && (isAdminRoute || isSocioRoute)) {
     try {
       const parts = accessToken.split(".");
       if (parts.length === 3) {
         const payloadJson = Buffer.from(parts[1], "base64url").toString("utf-8");
         const payload = JSON.parse(payloadJson);
+
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        if (payload.exp && payload.exp < nowSeconds && !refreshToken) {
+          const loginUrl = new URL(isAdminRoute ? "/admin/login" : "/login", request.url);
+          loginUrl.searchParams.set("from", pathname);
+          const redirectRes = NextResponse.redirect(loginUrl);
+          redirectRes.cookies.delete("access_token");
+          redirectRes.cookies.delete("refresh_token");
+          return redirectRes;
+        }
 
         if (isAdminRoute && payload.role !== "ADMIN") {
           // Un socio intentando entrar a admin → mandarlo a su portal
@@ -80,7 +90,12 @@ export function middleware(request: NextRequest) {
       }
     } catch {
       // Si el token está mal formado, redirigir al login correspondiente
-      return NextResponse.redirect(new URL(isAdminRoute ? "/admin/login" : "/login", request.url));
+      const loginUrl = new URL(isAdminRoute ? "/admin/login" : "/login", request.url);
+      loginUrl.searchParams.set("from", pathname);
+      const redirectRes = NextResponse.redirect(loginUrl);
+      redirectRes.cookies.delete("access_token");
+      redirectRes.cookies.delete("refresh_token");
+      return redirectRes;
     }
   }
 

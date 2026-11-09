@@ -32,7 +32,19 @@ export function UserDropdown() {
   React.useEffect(() => {
     let active = true;
     fetch("/api/auth/me", { cache: "no-store" })
-      .then(async (response) => response.ok ? response.json() : null)
+      .then(async (response) => {
+        if (response.status === 401) {
+          if (active) {
+            setUser(null);
+            const pathname = window.location.pathname;
+            if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) {
+              window.location.href = `/admin/login?from=${encodeURIComponent(pathname)}`;
+            }
+          }
+          return null;
+        }
+        return response.ok ? response.json() : null;
+      })
       .then((profile) => { if (active && profile?.role === "ADMIN") setUser(profile); })
       .catch(() => { if (active) setUser(null); });
     return () => { active = false; };

@@ -58,8 +58,30 @@ public class RefreshTokenService {
         RefreshToken existing = refreshTokenRepository.findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(() -> new BadCredentialsException("Token de actualización no reconocido"));
 
-        // Detección de reuso de token comprometido
+        // Detección de reuso de token comprometido con ventana de gracia para peticiones concurrentes
         if (existing.getRevokedAt() != null) {
+            Instant graceThreshold = Instant.now().minusSeconds(60);
+            if (existing.getReplacedBy() != null && existing.getRevokedAt().isAfter(graceThreshold)) {
+                RefreshToken nextToken = refreshTokenRepository.findById(existing.getReplacedBy()).orElse(null);
+                if (nextToken != null && nextToken.isActive()) {
+                    AppUser user = appUserRepository.findById(nextToken.getUserId())
+                            .orElseThrow(() -> new BadCredentialsException("Usuario no encontrado"));
+                    String newRawToken = generateSecureRandomHex(32);
+                    String newTokenHash = hashToken(newRawToken);
+                    Instant expiresAt = Instant.now().plusSeconds(refreshTokenExpirationSeconds);
+                    RefreshToken parallelToken = RefreshToken.create(
+                            user.getId(),
+                            existing.getFamilyId(),
+                            newTokenHash,
+                            expiresAt,
+                            ip,
+                            userAgent
+                    );
+                    refreshTokenRepository.save(parallelToken);
+                    return new RotationResult(newRawToken, user);
+                }
+            }
+
             refreshTokenRepository.revokeFamily(existing.getFamilyId());
             throw new BadCredentialsException("Alerta de seguridad: intento de reutilización de token. La familia de sesiones ha sido revocada.");
         }

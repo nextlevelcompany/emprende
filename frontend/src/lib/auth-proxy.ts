@@ -54,13 +54,13 @@ export async function proxyAuthenticatedAuthRequest(
   const isProduction = process.env.NODE_ENV === "production";
 
   if (rotatedTokens?.accessToken && rotatedTokens.refreshToken) {
-    result.cookies.set("access_token", rotatedTokens.accessToken, { httpOnly: true, secure: isProduction, sameSite: "strict", path: "/", maxAge: 15 * 60 });
+    result.cookies.set("access_token", rotatedTokens.accessToken, { httpOnly: true, secure: isProduction, sameSite: "strict", path: "/", maxAge: 4 * 60 * 60 });
     result.cookies.set("refresh_token", rotatedTokens.refreshToken, { httpOnly: true, secure: isProduction, sameSite: "strict", path: "/", maxAge: 7 * 24 * 60 * 60 });
   }
 
   if (response.ok && options.rotateTokens && data && typeof data === "object") {
     const tokens = data as { accessToken?: string; refreshToken?: string };
-    if (tokens.accessToken) result.cookies.set("access_token", tokens.accessToken, { httpOnly: true, secure: isProduction, sameSite: "strict", path: "/", maxAge: 15 * 60 });
+    if (tokens.accessToken) result.cookies.set("access_token", tokens.accessToken, { httpOnly: true, secure: isProduction, sameSite: "strict", path: "/", maxAge: 4 * 60 * 60 });
     if (tokens.refreshToken) result.cookies.set("refresh_token", tokens.refreshToken, { httpOnly: true, secure: isProduction, sameSite: "strict", path: "/", maxAge: 7 * 24 * 60 * 60 });
   }
   if (response.ok && options.clearSession) {

@@ -118,6 +118,11 @@ export default function AnalyticsDashboard() {
     setIsLoading(true);
     try {
       const res = await fetch("/api/dashboard/metrics");
+      if (res.status === 401) {
+        toast.error("Tu sesión ha expirado. Redirigiendo al inicio de sesión...");
+        window.location.href = "/admin/login?from=/dashboard/analytics";
+        return;
+      }
       if (!res.ok) {
         throw new Error("Error al obtener indicadores del dashboard");
       }
@@ -153,11 +158,21 @@ export default function AnalyticsDashboard() {
 
   if (!data) {
     return (
-      <div className="p-8 text-center">
+      <div className="p-8 text-center space-y-4">
         <p className="text-destructive font-medium">No se pudieron cargar los datos del dashboard.</p>
-        <Button variant="outline" className="mt-4" onClick={loadData}>
-          Reintentar
-        </Button>
+        <div className="flex items-center justify-center gap-3">
+          <Button variant="outline" onClick={loadData}>
+            Reintentar
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => {
+              window.location.href = "/admin/login?from=/dashboard/analytics";
+            }}
+          >
+            Iniciar Sesión
+          </Button>
+        </div>
       </div>
     );
   }

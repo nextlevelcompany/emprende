@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         secure: secureCookie,
         sameSite: "lax",
         path: "/",
-        maxAge: 15 * 60, // 15 minutos
+        maxAge: 4 * 60 * 60, // 4 horas
       });
     }
 

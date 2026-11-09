@@ -82,11 +82,16 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
 
+security:
+  jwt:
+    access-token-expiration-seconds: ${SECURITY_JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:14400}
+    refresh-token-expiration-seconds: ${SECURITY_JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:604800}
+
 app:
   security:
     rls-context-hmac-secret-hex: ${RLS_CONTEXT_HMAC_SECRET_HEX}
     jwt:
-      access-token-expiration-minutes: 15
+      access-token-expiration-minutes: 240
       refresh-token-expiration-days: 7
     mfa:
       issuer: "Caja Emprende Chambala"
