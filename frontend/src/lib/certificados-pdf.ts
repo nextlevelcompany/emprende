@@ -114,20 +114,40 @@ export function cantidadAccionesALetras(n: number): string {
 export function extraerAnio(fechaStr?: string | null): number {
   if (!fechaStr) return new Date().getFullYear();
   const soloFecha = String(fechaStr).trim().split("T")[0];
-  const partes = soloFecha.split("-");
-  const anio = parseInt(partes[0], 10);
-  return !isNaN(anio) && anio > 1900 ? anio : new Date().getFullYear();
+  const separator = soloFecha.includes("/") ? "/" : "-";
+  const partes = soloFecha.split(separator);
+  if (partes.length >= 3) {
+    if (partes[0].length === 4) {
+      const anio = parseInt(partes[0], 10);
+      if (!isNaN(anio) && anio > 1900) return anio;
+    }
+    if (partes[2].length === 4) {
+      const anio = parseInt(partes[2], 10);
+      if (!isNaN(anio) && anio > 1900) return anio;
+    }
+  }
+  const match = soloFecha.match(/\b(19\d\d|20\d\d)\b/);
+  if (match) return parseInt(match[0], 10);
+  return new Date().getFullYear();
 }
 
 export function formatearFechaFormal(fechaStr?: string | null): string {
   if (!fechaStr) return "";
   try {
     const soloFecha = String(fechaStr).trim().split("T")[0];
-    const partes = soloFecha.split("-");
+    const separator = soloFecha.includes("/") ? "/" : "-";
+    const partes = soloFecha.split(separator);
     if (partes.length >= 3) {
-      const y = parseInt(partes[0], 10);
-      const m = parseInt(partes[1], 10);
-      const d = parseInt(partes[2], 10);
+      let y: number, m: number, d: number;
+      if (partes[0].length === 4) {
+        y = parseInt(partes[0], 10);
+        m = parseInt(partes[1], 10);
+        d = parseInt(partes[2], 10);
+      } else {
+        d = parseInt(partes[0], 10);
+        m = parseInt(partes[1], 10);
+        y = parseInt(partes[2], 10);
+      }
       const meses = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
@@ -161,12 +181,12 @@ export function dibujarCertificadoEnPagina(
   directiva: DirectivaCargoPDFData[],
   empresa?: EmpresaPDFData | null
 ): void {
-  // 1. Fecha oficial canónica jalada prioritariamente de los datos de la empresa
+  // 1. Fecha oficial canónica: prioridad absoluta a la fecha propia de emisión del certificado
   const fechaOficialStr =
+    cert.fechaEmision ||
     empresa?.fechaEmisionAcciones ||
     empresa?.fechaFundacion ||
-    cert.fechaEmision ||
-    "2021-06-08";
+    new Date().toISOString().split("T")[0];
 
   const anioEmision = extraerAnio(fechaOficialStr);
   const fechaFormateada = formatearFechaFormal(fechaOficialStr);
@@ -555,7 +575,8 @@ export function descargarLoteCertificadosPDF(
     dibujarCertificadoEnPagina(doc, cert, directiva, empresa);
   });
 
-  doc.save(`${tituloLote}.pdf`);
+  const nombreLimpio = limpiarNombreArchivo(tituloLote);
+  doc.save(`${nombreLimpio}.pdf`);
 }
 
 /**
@@ -566,7 +587,9 @@ export function descargarReporteAccionesPorFechasPDF(
   directiva: DirectivaCargoPDFData[],
   fechaDesde?: string,
   fechaHasta?: string,
-  empresa?: EmpresaPDFData | null
+  empresa?: EmpresaPDFData | null,
+  tituloPersonalizado?: string,
+  subtituloPersonalizado?: string
 ): void {
   const doc = new jsPDF({
     orientation: "landscape",
@@ -580,14 +603,15 @@ export function descargarReporteAccionesPorFechasPDF(
     year: "numeric",
   });
 
-  const textoRango =
-    fechaDesde && fechaHasta
-      ? `Desde: ${formatearFechaFormal(fechaDesde)}  hasta: ${formatearFechaFormal(fechaHasta)}`
-      : fechaDesde
-      ? `Desde: ${formatearFechaFormal(fechaDesde)} hasta la actualidad`
-      : fechaHasta
-      ? `Hasta: ${formatearFechaFormal(fechaHasta)}`
-      : "Histórico general acumulado";
+  const textoRango = subtituloPersonalizado
+    ? subtituloPersonalizado
+    : fechaDesde && fechaHasta
+    ? `Desde: ${formatearFechaFormal(fechaDesde)}  hasta: ${formatearFechaFormal(fechaHasta)}`
+    : fechaDesde
+    ? `Desde: ${formatearFechaFormal(fechaDesde)} hasta la actualidad`
+    : fechaHasta
+    ? `Hasta: ${formatearFechaFormal(fechaHasta)}`
+    : "Histórico general acumulado";
 
   const razonSocial = (empresa?.nombre || "CAJA COMUNAL EMPRENDE CHAMBALA").toUpperCase();
   const nombreComercial = (empresa?.nombreComercial || "UNIÓN DE CRÉDITO Y AHORRO (UNICA)").toUpperCase();
@@ -746,7 +770,8 @@ export function descargarReporteAccionesPorFechasPDF(
     );
   }
 
-  const nombreDesde = fechaDesde || "inicio";
-  const nombreHasta = fechaHasta || "actual";
-  doc.save(`Libro_Matricula_Acciones_${nombreDesde}_a_${nombreHasta}.pdf`);
+  const nombreArchivo = tituloPersonalizado
+    ? limpiarNombreArchivo(tituloPersonalizado)
+    : `Libro_Matricula_Acciones_${fechaDesde || "inicio"}_a_${fechaHasta || "actual"}`;
+  doc.save(`${nombreArchivo}.pdf`);
 }

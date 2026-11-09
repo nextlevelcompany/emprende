@@ -124,6 +124,29 @@ interface CertificadoAccion {
   socioDocumentoNumero?: string | null;
 }
 
+interface Periodo {
+  id: string;
+  anio: number;
+  mes: number;
+  fechaReunion?: string;
+  estado?: "ABIERTO" | "CERRADO" | string;
+}
+
+const MESES = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Setiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
 interface DirectivaCargo {
   id?: string;
   cargo: string;
@@ -164,6 +187,7 @@ export default function AccionesPage() {
   const [socios, setSocios] = React.useState<ResumenSocioAcciones[]>([]);
   const [certificados, setCertificados] = React.useState<CertificadoAccion[]>([]);
   const [transferencias, setTransferencias] = React.useState<TransferenciaAccion[]>([]);
+  const [periodos, setPeriodos] = React.useState<Periodo[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   // Filtros
@@ -174,13 +198,15 @@ export default function AccionesPage() {
   const [filtroFechaHasta, setFiltroFechaHasta] = React.useState<string>("");
   const [activeTab, setActiveTab] = React.useState("socios");
 
-  // Modal Descarga por Fechas
-  const [modalDescargaFechas, setModalDescargaFechas] = React.useState(false);
+  // Modal Descarga (General, Periodo Contable, Accionista)
+  const [modalDescarga, setModalDescarga] = React.useState(false);
+  const [descargaAlcance, setDescargaAlcance] = React.useState<"GENERAL" | "PERIODO" | "SOCIO">("GENERAL");
+  const [selectedPeriodoId, setSelectedPeriodoId] = React.useState<string>("");
+  const [selectedSocioId, setSelectedSocioId] = React.useState<string>("");
+  const [searchSocioModal, setSearchSocioModal] = React.useState<string>("");
   const [descargaTipoModal, setDescargaTipoModal] = React.useState<"CERTIFICADOS" | "PADRON">("CERTIFICADOS");
   const [modalFechaDesde, setModalFechaDesde] = React.useState<string>("");
-  const [modalFechaHasta, setModalFechaHasta] = React.useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  const [modalFechaHasta, setModalFechaHasta] = React.useState<string>("");
   const [modalEstadoFiltro, setModalEstadoFiltro] = React.useState<string>("TODOS");
 
   // Modal de Transferencia
@@ -206,13 +232,14 @@ export default function AccionesPage() {
     try {
       setLoading(true);
       const t = Date.now();
-      const [resResumen, resSocios, resCerts, resTrans, resDirectiva, resEmpresa] = await Promise.all([
+      const [resResumen, resSocios, resCerts, resTrans, resDirectiva, resEmpresa, resPeriodos] = await Promise.all([
         fetch(`/api/acciones/resumen?t=${t}`, { cache: "no-store" }).then((r) => r.json()),
         fetch(`/api/acciones/socios?t=${t}`, { cache: "no-store" }).then((r) => r.json()),
         fetch(`/api/acciones/certificados?t=${t}`, { cache: "no-store" }).then((r) => r.json()),
         fetch(`/api/acciones/transferencias?t=${t}`, { cache: "no-store" }).then((r) => r.json()),
         fetch(`/api/directiva?soloActivos=true&t=${t}`, { cache: "no-store" }).then((r) => r.json()).catch(() => []),
         fetch(`/api/empresa?t=${t}`, { cache: "no-store" }).then((r) => r.json()).catch(() => null),
+        fetch(`/api/periodos?t=${t}`, { cache: "no-store" }).then((r) => r.json()).catch(() => []),
       ]);
 
       if (resResumen && !resResumen.detail) setResumen(resResumen);
@@ -235,6 +262,16 @@ export default function AccionesPage() {
       if (Array.isArray(resTrans)) setTransferencias(resTrans);
       if (Array.isArray(resDirectiva)) setDirectiva(resDirectiva);
       if (resEmpresa && !resEmpresa.detail) setEmpresa(resEmpresa);
+      if (Array.isArray(resPeriodos)) {
+        const sorted = [...resPeriodos].sort((a, b) => {
+          if (b.anio !== a.anio) return b.anio - a.anio;
+          return b.mes - a.mes;
+        });
+        setPeriodos(sorted);
+        if (sorted.length > 0) {
+          setSelectedPeriodoId((prev) => prev || sorted[0].id);
+        }
+      }
     } catch {
       toast.error("Error al cargar datos de matrícula de acciones");
     } finally {
@@ -349,44 +386,98 @@ export default function AccionesPage() {
   const certificadosModal = React.useMemo(() => {
     return certificados.filter((c) => {
       const matchEstado = modalEstadoFiltro === "TODOS" || c.estado === modalEstadoFiltro;
+      if (!matchEstado) return false;
+
+      if (descargaAlcance === "PERIODO") {
+        if (!selectedPeriodoId) return false;
+        const p = periodos.find((per) => per.id === selectedPeriodoId);
+        const matchPeriodoId = c.periodoId === selectedPeriodoId;
+        const matchPeriodoFecha =
+          p && c.fechaEmision && c.fechaEmision.startsWith(`${p.anio}-${String(p.mes).padStart(2, "0")}`);
+        return matchPeriodoId || matchPeriodoFecha;
+      }
+
+      if (descargaAlcance === "SOCIO") {
+        if (!selectedSocioId) return false;
+        return c.socioId === selectedSocioId;
+      }
+
       const matchDesde = !modalFechaDesde || (c.fechaEmision && c.fechaEmision >= modalFechaDesde);
       const matchHasta = !modalFechaHasta || (c.fechaEmision && c.fechaEmision <= modalFechaHasta);
-      return matchEstado && matchDesde && matchHasta;
+      return matchDesde && matchHasta;
     });
-  }, [certificados, modalEstadoFiltro, modalFechaDesde, modalFechaHasta]);
+  }, [
+    certificados,
+    descargaAlcance,
+    selectedPeriodoId,
+    selectedSocioId,
+    modalEstadoFiltro,
+    modalFechaDesde,
+    modalFechaHasta,
+    periodos,
+  ]);
 
-  const handleDescargarModalFechas = () => {
-    if (modalFechaDesde && modalFechaHasta && modalFechaDesde > modalFechaHasta) {
+  const handleDescargarModal = () => {
+    if (descargaAlcance === "GENERAL" && modalFechaDesde && modalFechaHasta && modalFechaDesde > modalFechaHasta) {
       toast.error("La fecha inicial no puede ser posterior a la fecha final");
       return;
     }
+    if (descargaAlcance === "PERIODO" && !selectedPeriodoId) {
+      toast.error("Seleccione un periodo contable");
+      return;
+    }
+    if (descargaAlcance === "SOCIO" && !selectedSocioId) {
+      toast.error("Seleccione un accionista / socio");
+      return;
+    }
     if (certificadosModal.length === 0) {
-      toast.warning("No se encontraron certificados en el rango de fechas seleccionado");
+      toast.warning("No se encontraron certificados con los criterios seleccionados");
       return;
     }
 
     try {
+      let tituloReporte = "Certificados_Acciones_General";
+      let subtitulo = "Histórico general acumulado de certificados de acciones";
+
+      if (descargaAlcance === "PERIODO") {
+        const p = periodos.find((per) => per.id === selectedPeriodoId);
+        const nombreMes = p ? MESES[p.mes - 1] : "Periodo";
+        const anio = p ? p.anio : "";
+        tituloReporte = `Certificados_Acciones_${nombreMes}_${anio}`;
+        subtitulo = `Periodo Contable: ${nombreMes} ${anio}${p?.fechaReunion ? ` (Reunión: ${formatFecha(p.fechaReunion)})` : ""}`;
+      } else if (descargaAlcance === "SOCIO") {
+        const s = socios.find((soc) => soc.socioId === selectedSocioId);
+        const nombreSocio = s?.socioNombre || "Socio";
+        tituloReporte = `Certificados_Acciones_Socio_${s?.socioCodigo || ""}_${nombreSocio}`;
+        subtitulo = `Accionista: ${nombreSocio} (Cód. #${s?.socioCodigo || "—"})`;
+      } else if (modalFechaDesde || modalFechaHasta) {
+        tituloReporte = `Certificados_Acciones_${modalFechaDesde || "inicio"}_al_${modalFechaHasta || "actual"}`;
+        subtitulo = `Período de emisión: ${modalFechaDesde ? formatFecha(modalFechaDesde) : "Inicio"} al ${modalFechaHasta ? formatFecha(modalFechaHasta) : "Actual"}`;
+      }
+
       if (descargaTipoModal === "CERTIFICADOS") {
-        const nombreArchivo = `Certificados_Acciones_${modalFechaDesde || "inicio"}_al_${modalFechaHasta || "actual"}`;
-        descargarLoteCertificadosPDF(certificadosModal, directiva, nombreArchivo, empresa);
+        descargarLoteCertificadosPDF(certificadosModal, directiva, tituloReporte, empresa);
         toast.success(
           `Se descargó el lote de ${certificadosModal.length} certificados oficiales en PDF`
         );
       } else {
+        const tituloPadron = tituloReporte.replace("Certificados_", "Padron_");
         descargarReporteAccionesPorFechasPDF(
           certificadosModal,
           directiva,
           modalFechaDesde || undefined,
           modalFechaHasta || undefined,
-          empresa
+          empresa,
+          tituloPadron,
+          subtitulo
         );
         toast.success(
           "Padrón y reporte de matrícula de acciones descargado exitosamente en PDF"
         );
       }
-      setModalDescargaFechas(false);
+      setModalDescarga(false);
     } catch (err: unknown) {
-      toast.error("Error al generar el archivo PDF: " + (getErrorMessage(err, "error desconocido")));
+      toast.error("Error al generar el archivo PDF: " + getErrorMessage(err, "error desconocido"));
     }
   };
 
@@ -430,14 +521,15 @@ export default function AccionesPage() {
             variant="outline"
             size="sm"
             onClick={() => {
+              setDescargaAlcance("GENERAL");
               setModalFechaDesde(filtroFechaDesde || "");
-              setModalFechaHasta(filtroFechaHasta || new Date().toISOString().split("T")[0]);
-              setModalDescargaFechas(true);
+              setModalFechaHasta(filtroFechaHasta || "");
+              setModalDescarga(true);
             }}
             className="gap-2 border-emerald-600/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-xs"
           >
-            <Calendar className="size-4 text-emerald-600" />
-            Descargar por Fechas
+            <FileDown className="size-4 text-emerald-600" />
+            Descargar Certificados / Padrón
           </Button>
 
           <Button
@@ -812,17 +904,18 @@ export default function AccionesPage() {
                     variant="outline"
                     size="sm"
                     className="h-9 px-3 text-xs gap-1.5 border-emerald-600/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-2xs"
-                    title="Abrir opciones de descarga por fechas"
+                    title="Abrir opciones de descarga"
                     disabled={certificadosFiltrados.length === 0}
                     onClick={() => {
+                      setDescargaAlcance("GENERAL");
                       setModalFechaDesde(filtroFechaDesde);
-                      setModalFechaHasta(filtroFechaHasta || new Date().toISOString().split("T")[0]);
+                      setModalFechaHasta(filtroFechaHasta || "");
                       setModalEstadoFiltro(filtroEstadoCert);
-                      setModalDescargaFechas(true);
+                      setModalDescarga(true);
                     }}
                   >
                     <FileDown className="size-3.5 text-emerald-600" />
-                    <span>Descargar Fechas ({certificadosFiltrados.length})</span>
+                    <span>Descargar Lote ({certificadosFiltrados.length})</span>
                   </Button>
                 </div>
               </div>
@@ -880,7 +973,7 @@ export default function AccionesPage() {
                             {formatMoneda(c.totalMonto)}
                           </TableCell>
                           <TableCell className="text-center text-xs font-mono text-muted-foreground">
-                            {empresa?.fechaFundacion || c.fechaEmision || "—"}
+                            {c.fechaEmision ? formatFecha(c.fechaEmision) : (empresa?.fechaFundacion ? formatFecha(empresa.fechaFundacion) : "—")}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="text-[10px] uppercase font-mono">
@@ -1214,50 +1307,191 @@ export default function AccionesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: Descargar Acciones por Fechas */}
-      <Dialog open={modalDescargaFechas} onOpenChange={setModalDescargaFechas}>
-        <DialogContent className="max-w-lg">
+      {/* MODAL: Descargar Acciones (General, Periodo Contable, Accionista) */}
+      <Dialog open={modalDescarga} onOpenChange={setModalDescarga}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="size-5 text-emerald-600" />
-              Descargar Acciones por Rango de Fechas
+              <FileDown className="size-5 text-emerald-600" />
+              Descargar Certificados de Acciones y Padrón
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Seleccione el período de fechas de emisión y el formato de documento PDF que desea generar.
+              Seleccione el alcance de descarga (general, por periodo contable o por accionista) y el formato del documento en PDF.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-3">
-            {/* Rango de Fechas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label htmlFor="modalDesde" className="text-xs font-semibold">
-                  Fecha Inicial (Desde)
-                </Label>
-                <Input
-                  id="modalDesde"
-                  type="date"
-                  value={modalFechaDesde}
-                  onChange={(e) => setModalFechaDesde(e.target.value)}
-                  className="text-xs h-9"
-                />
-              </div>
+          <div className="grid gap-4 py-2">
+            {/* 1. Selector de Alcance */}
+            <div className="grid gap-1.5">
+              <Label className="text-xs font-semibold">Criterio o Alcance de Descarga</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDescargaAlcance("GENERAL")}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2.5 rounded-lg border text-xs font-medium transition-all text-center gap-1",
+                    descargaAlcance === "GENERAL"
+                      ? "border-primary bg-primary/10 text-primary shadow-xs font-semibold"
+                      : "border-border hover:bg-muted/50 text-muted-foreground"
+                  )}
+                >
+                  <Building2 className="size-4" />
+                  <span>General</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">Todo el padrón</span>
+                </button>
 
-              <div className="grid gap-1.5">
-                <Label htmlFor="modalHasta" className="text-xs font-semibold">
-                  Fecha Final (Hasta)
-                </Label>
-                <Input
-                  id="modalHasta"
-                  type="date"
-                  value={modalFechaHasta}
-                  onChange={(e) => setModalFechaHasta(e.target.value)}
-                  className="text-xs h-9"
-                />
+                <button
+                  type="button"
+                  onClick={() => setDescargaAlcance("PERIODO")}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2.5 rounded-lg border text-xs font-medium transition-all text-center gap-1",
+                    descargaAlcance === "PERIODO"
+                      ? "border-primary bg-primary/10 text-primary shadow-xs font-semibold"
+                      : "border-border hover:bg-muted/50 text-muted-foreground"
+                  )}
+                >
+                  <Calendar className="size-4" />
+                  <span>Por Periodo</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">Mes contable</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDescargaAlcance("SOCIO")}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-2.5 rounded-lg border text-xs font-medium transition-all text-center gap-1",
+                    descargaAlcance === "SOCIO"
+                      ? "border-primary bg-primary/10 text-primary shadow-xs font-semibold"
+                      : "border-border hover:bg-muted/50 text-muted-foreground"
+                  )}
+                >
+                  <Users className="size-4" />
+                  <span>Por Accionista</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">Socio individual</span>
+                </button>
               </div>
             </div>
 
-            {/* Filtro de Estado Opcional */}
+            {/* 2. Filtro específico según el alcance */}
+            {descargaAlcance === "GENERAL" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/50">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="modalDesde" className="text-xs font-semibold">
+                    Fecha Inicial (Opcional)
+                  </Label>
+                  <Input
+                    id="modalDesde"
+                    type="date"
+                    value={modalFechaDesde}
+                    onChange={(e) => setModalFechaDesde(e.target.value)}
+                    className="text-xs h-9 bg-background"
+                  />
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label htmlFor="modalHasta" className="text-xs font-semibold">
+                    Fecha Final (Opcional)
+                  </Label>
+                  <Input
+                    id="modalHasta"
+                    type="date"
+                    value={modalFechaHasta}
+                    onChange={(e) => setModalFechaHasta(e.target.value)}
+                    className="text-xs h-9 bg-background"
+                  />
+                </div>
+              </div>
+            )}
+
+            {descargaAlcance === "PERIODO" && (
+              <div className="grid gap-1.5 bg-muted/20 p-2.5 rounded-lg border border-border/50">
+                <Label className="text-xs font-semibold flex items-center justify-between">
+                  <span>Seleccionar Periodo Contable</span>
+                  {periodos.length > 0 && (
+                    <span className="text-[11px] text-muted-foreground font-normal">
+                      {periodos.length} periodos registrados
+                    </span>
+                  )}
+                </Label>
+                <Select value={selectedPeriodoId} onValueChange={setSelectedPeriodoId}>
+                  <SelectTrigger className="text-xs h-9 bg-background">
+                    <SelectValue placeholder="Seleccione un periodo contable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periodos.map((p) => {
+                      const certsCount = certificados.filter(
+                        (c) =>
+                          c.periodoId === p.id ||
+                          (c.fechaEmision && c.fechaEmision.startsWith(`${p.anio}-${String(p.mes).padStart(2, "0")}`))
+                      ).length;
+                      return (
+                        <SelectItem key={p.id} value={p.id}>
+                          {MESES[p.mes - 1]} {p.anio} {p.fechaReunion ? `— Reunión: ${formatFecha(p.fechaReunion)}` : ""} ({certsCount} certs)
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {descargaAlcance === "SOCIO" && (
+              <div className="grid gap-2 bg-muted/20 p-2.5 rounded-lg border border-border/50">
+                <Label className="text-xs font-semibold">Seleccionar Accionista / Socio</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por nombre o código de socio..."
+                    value={searchSocioModal}
+                    onChange={(e) => setSearchSocioModal(e.target.value)}
+                    className="text-xs h-8 pl-8 bg-background"
+                  />
+                </div>
+                <div className="max-h-36 overflow-y-auto rounded-md border border-border divide-y text-xs bg-background">
+                  {socios
+                    .filter((s) => {
+                      if (!searchSocioModal.trim()) return true;
+                      const q = searchSocioModal.toLowerCase();
+                      return (
+                        s.socioNombre.toLowerCase().includes(q) ||
+                        s.socioCodigo.toString().includes(q)
+                      );
+                    })
+                    .map((s) => {
+                      const isSelected = selectedSocioId === s.socioId;
+                      const certsCount = certificados.filter((c) => c.socioId === s.socioId).length;
+                      return (
+                        <div
+                          key={s.socioId}
+                          onClick={() => setSelectedSocioId(s.socioId)}
+                          className={cn(
+                            "p-2 flex items-center justify-between cursor-pointer transition-colors",
+                            isSelected
+                              ? "bg-primary/10 text-primary font-semibold"
+                              : "hover:bg-muted/50 text-foreground"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-muted-foreground text-[11px]">#{s.socioCodigo}</span>
+                            <span className="truncate max-w-[200px]">{s.socioNombre}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <Badge variant="outline" className="text-[10px]">
+                              {certsCount} {certsCount === 1 ? "cert." : "certs."}
+                            </Badge>
+                            <span className="text-muted-foreground font-mono">
+                              {s.totalAccionesActivas} acc.
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Filtro de Estado Opcional */}
             <div className="grid gap-1.5">
               <Label className="text-xs font-semibold">Filtro de Estado</Label>
               <Select value={modalEstadoFiltro} onValueChange={setModalEstadoFiltro}>
@@ -1273,7 +1507,7 @@ export default function AccionesPage() {
               </Select>
             </div>
 
-            {/* Formato de Descarga */}
+            {/* 4. Formato de Descarga */}
             <div className="grid gap-2">
               <Label className="text-xs font-semibold">Formato de Documento en PDF</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1315,7 +1549,7 @@ export default function AccionesPage() {
               </div>
             </div>
 
-            {/* Resumen dinámico del rango */}
+            {/* 5. Resumen dinámico del filtro */}
             <div className="rounded-lg bg-muted/40 border border-border/60 p-3 text-xs">
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>Certificados encontrados:</span>
@@ -1324,7 +1558,7 @@ export default function AccionesPage() {
                 </strong>
               </div>
               <div className="flex items-center justify-between text-muted-foreground mt-1">
-                <span>Total acciones en el rango:</span>
+                <span>Total acciones representadas:</span>
                 <strong className="text-foreground font-mono">
                   {certificadosModal.reduce((sum, c) => sum + (c.cantidad || 0), 0).toLocaleString("es-PE")} acc.
                 </strong>
@@ -1338,19 +1572,19 @@ export default function AccionesPage() {
 
               {certificadosModal.length === 0 && (
                 <p className="text-rose-500 text-xs mt-2 font-medium">
-                  ⚠️ No existen certificados registrados en el rango de fechas indicado.
+                  ⚠️ No existen certificados registrados con los criterios seleccionados.
                 </p>
               )}
             </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setModalDescargaFechas(false)}>
+            <Button type="button" variant="outline" onClick={() => setModalDescarga(false)}>
               Cancelar
             </Button>
             <Button
               type="button"
-              onClick={handleDescargarModalFechas}
+              onClick={handleDescargarModal}
               disabled={certificadosModal.length === 0}
               className="gap-2 bg-primary text-primary-foreground shadow"
             >
